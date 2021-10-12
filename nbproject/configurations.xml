@@ -32,6 +32,7 @@
         <in>OpenGLModelRenderer.cpp</in>
         <in>glad.c</in>
         <in>model_export.cpp</in>
+        <in>ogl_ML_data_augmenter.cpp</in>
         <in>ogl_depthrenderer.cpp</in>
         <in>screenshots.cpp</in>
         <in>stb_image.cpp</in>
@@ -436,8 +437,7 @@
                  commonFlags="-mtune=generic -march=x86-64 -fPIC -fstack-protector-strong"/>
         <element flagsID="1"
                  commonFlags="-mtune=generic -march=x86-64 -std=c++11 -fPIC -fstack-protector-strong"/>
-        <element flagsID="2" commonFlags="-std=c++11 -fPIC"/>
-        <element flagsID="3" commonFlags="-std=c++14"/>
+        <element flagsID="2" commonFlags="-std=c++14"/>
       </flagsDictionary>
       <codeAssistance>
       </codeAssistance>
@@ -462,7 +462,7 @@
             ex="false"
             tool="1"
             flavor2="11">
-        <ccTool flags="3">
+        <ccTool flags="2">
         </ccTool>
       </item>
       <item path="build/CMakeFiles/feature_tests.c" ex="false" tool="0" flavor2="2">
@@ -471,7 +471,7 @@
             ex="false"
             tool="1"
             flavor2="11">
-        <ccTool flags="3">
+        <ccTool flags="2">
         </ccTool>
       </item>
       <folder path="0/src">
@@ -492,7 +492,7 @@
       <item path="include/SOIL.c" ex="false" tool="0" flavor2="2">
       </item>
       <item path="include/glm/detail/glm.cpp" ex="false" tool="1" flavor2="11">
-        <ccTool flags="3">
+        <ccTool flags="2">
         </ccTool>
       </item>
       <item path="include/image_DXT.c" ex="false" tool="0" flavor2="2">
@@ -583,12 +583,31 @@
         </ccTool>
       </item>
       <item path="src/ogl_depthrenderer.cpp" ex="false" tool="1" flavor2="8">
-        <ccTool flags="2">
+        <ccTool flags="1">
           <incDir>
-            <pElem>configuration</pElem>
             <pElem>include</pElem>
+            <pElem>include/learnopengl</pElem>
+            <pElem>include/assimp</pElem>
+            <pElem>src</pElem>
+            <pElem>include/glm/detail</pElem>
+            <pElem>include/glm/ext</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/GLFW</pElem>
+            <pElem>include/glm</pElem>
+            <pElem>configuration</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include/glm/simd</pElem>
+            <pElem>include/glm/gtc</pElem>
+            <pElem>include/assimp/Compiler</pElem>
             <pElem>build</pElem>
           </incDir>
+          <preprocessorList>
+            <Elem>__REGISTER_PREFIX__=</Elem>
+            <Elem>__STRICT_ANSI__=1</Elem>
+            <Elem>__USER_LABEL_PREFIX__=</Elem>
+            <Elem>__cplusplus=201103L</Elem>
+            <Elem>__cpp_constexpr=200704</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/screenshots.cpp" ex="false" tool="1" flavor2="8">
@@ -624,6 +643,214 @@
             <Elem>__cplusplus=201103L</Elem>
             <Elem>__cpp_constexpr=200704</Elem>
           </preprocessorList>
+        </ccTool>
+      </item>
+    </conf>
+    <conf name="ogl_ML_data_augmenter" type="0">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <flagsDictionary>
+        <element flagsID="0"
+                 commonFlags="-mtune=generic -march=x86-64 -fPIC -fstack-protector-strong"/>
+        <element flagsID="1"
+                 commonFlags="-mtune=generic -march=x86-64 -std=c++11 -fPIC -fstack-protector-strong"/>
+        <element flagsID="2" commonFlags="-std=c++14"/>
+      </flagsDictionary>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>build</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath>build/bin/ogl_ML_data_augmenter</executablePath>
+        </makeTool>
+        <preBuild>
+          <preBuildCommandWorkingDir>build</preBuildCommandWorkingDir>
+          <preBuildCommand>${CMAKE} -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${IDE_CC} -DCMAKE_CXX_COMPILER=${IDE_CXX} -DCMAKE_C_FLAGS_DEBUG="-g3 -gdwarf-2" -DCMAKE_CXX_FLAGS_DEBUG="-g3 -gdwarf-2" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..</preBuildCommand>
+        </preBuild>
+      </makefileType>
+      <item path="build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+      </item>
+      <item path="build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp"
+            ex="false"
+            tool="1"
+            flavor2="11">
+        <ccTool flags="2">
+        </ccTool>
+      </item>
+      <item path="build/CMakeFiles/feature_tests.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="build/CMakeFiles/feature_tests.cxx"
+            ex="false"
+            tool="1"
+            flavor2="11">
+        <ccTool flags="2">
+        </ccTool>
+      </item>
+      <folder path="0/src">
+        <cTool>
+          <incDir>
+            <pElem>src</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include</pElem>
+            <pElem>build</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>__REGISTER_PREFIX__=</Elem>
+            <Elem>__USER_LABEL_PREFIX__=</Elem>
+          </preprocessorList>
+        </cTool>
+        <ccTool>
+          <preprocessorList>
+            <Elem>__REGISTER_PREFIX__=</Elem>
+            <Elem>__STRICT_ANSI__=1</Elem>
+            <Elem>__USER_LABEL_PREFIX__=</Elem>
+            <Elem>__cplusplus=201103L</Elem>
+            <Elem>__cpp_constexpr=200704</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
+      <item path="include/SOIL.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="include/glm/detail/glm.cpp" ex="false" tool="1" flavor2="11">
+        <ccTool flags="2">
+        </ccTool>
+      </item>
+      <item path="include/image_DXT.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="include/image_helper.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="include/stb_image_aug.c" ex="false" tool="0" flavor2="2">
+      </item>
+      <item path="src/OpenGLDepthRenderer.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>include/learnopengl</pElem>
+            <pElem>src</pElem>
+            <pElem>include/glm/detail</pElem>
+            <pElem>include/glm/ext</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/GLFW</pElem>
+            <pElem>include/glm</pElem>
+            <pElem>configuration</pElem>
+            <pElem>include/assimp</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include</pElem>
+            <pElem>include/glm/simd</pElem>
+            <pElem>include/glm/gtc</pElem>
+            <pElem>include/assimp/Compiler</pElem>
+            <pElem>build</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/OpenGLModelRenderer.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>include/learnopengl</pElem>
+            <pElem>include/assimp</pElem>
+            <pElem>src</pElem>
+            <pElem>include/glm/detail</pElem>
+            <pElem>include/glm/ext</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/GLFW</pElem>
+            <pElem>configuration</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include/glm</pElem>
+            <pElem>include/glm/simd</pElem>
+            <pElem>include/glm/gtc</pElem>
+            <pElem>include</pElem>
+            <pElem>include/assimp/Compiler</pElem>
+            <pElem>build</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/glad.c" ex="false" tool="0" flavor2="3">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="src/model_export.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>include/assimp</pElem>
+            <pElem>src</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include/GLFW</pElem>
+            <pElem>include/assimp/Compiler</pElem>
+            <pElem>include</pElem>
+            <pElem>build</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/ogl_ML_data_augmenter.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>include</pElem>
+            <pElem>include/learnopengl</pElem>
+            <pElem>include/assimp</pElem>
+            <pElem>src</pElem>
+            <pElem>include/glm/detail</pElem>
+            <pElem>include/glm/ext</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/GLFW</pElem>
+            <pElem>include/glm</pElem>
+            <pElem>configuration</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include/glm/simd</pElem>
+            <pElem>include/glm/gtc</pElem>
+            <pElem>include/assimp/Compiler</pElem>
+            <pElem>build</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/ogl_depthrenderer.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>include</pElem>
+            <pElem>include/learnopengl</pElem>
+            <pElem>include/assimp</pElem>
+            <pElem>src</pElem>
+            <pElem>include/glm/detail</pElem>
+            <pElem>include/glm/ext</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/GLFW</pElem>
+            <pElem>include/glm</pElem>
+            <pElem>configuration</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include/glm/simd</pElem>
+            <pElem>include/glm/gtc</pElem>
+            <pElem>include/assimp/Compiler</pElem>
+            <pElem>build</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/screenshots.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>src</pElem>
+            <pElem>include/glad</pElem>
+            <pElem>include/KHR</pElem>
+            <pElem>include/GLFW</pElem>
+            <pElem>include</pElem>
+            <pElem>build</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/stb_image.cpp" ex="false" tool="1" flavor2="8">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>include</pElem>
+            <pElem>src</pElem>
+            <pElem>build</pElem>
+          </incDir>
         </ccTool>
       </item>
     </conf>

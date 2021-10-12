@@ -83,7 +83,7 @@ file(GLOB SOURCE
     "src/*.fs"
     "src/*.gs"
 )
-set(NAMES OpenGLDepthRenderer OpenGLModelRenderer ogl_depthrenderer)
+set(NAMES OpenGLDepthRenderer OpenGLModelRenderer ogl_depthrenderer ogl_ML_data_augmenter)
 foreach(NAME ${NAMES})
     add_executable(${NAME} src/${NAME}.cpp ${SOURCE})
     target_link_libraries(${NAME} ${LIBS} png)

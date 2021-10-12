@@ -130,7 +130,6 @@ void cxxopts_integration(cxxopts::Options& options) {
             ("z", "z Position of the camera", cxxopts::value<float>()->default_value("0"))
             ("rx", "x resolution of the camera in pixels", cxxopts::value<unsigned int>()->default_value("600"))
             ("ry", "y resolution of the camera in pixels", cxxopts::value<unsigned int>()->default_value("600"))
-            ("r,radius", "Radius of visibility sphere", cxxopts::value<float>()->default_value("20"))
             ("o,output", "Output file <visibility_sphere.obj>", cxxopts::value<std::string>()->default_value("visibility_sphere.obj"))
             ("h,help", "Print usage")
             ;
@@ -163,7 +162,6 @@ int main(int argc, char **argv) {
     camera.Position.x = target_x;
     camera.Position.y = target_y;
     camera.Position.z = target_z;
-    float MAX_RANGE = result["radius"].as<float>();
     SCR_WIDTH = result["rx"].as<unsigned int>();
     SCR_HEIGHT = result["ry"].as<unsigned int>();
     // glfw: initialize and configure
@@ -222,7 +220,8 @@ int main(int argc, char **argv) {
 
     // build and compile shaders
     // -------------------------
-    Shader shader("depth_testing_revZ.vs", "depth_testing_revZ.fs");
+    Shader depth_shader("depth_testing_revZ.vs", "depth_testing_revZ.fs");
+    Shader rgb_shader("model_loading.vs", "model_loading.fs");
 
     //Model ourModel(FileSystem::getPath("resources/objects/backpack/backpack.obj"));
     Model ourModel("../../resources/objects/backpack/backpack.obj");
@@ -314,8 +313,8 @@ int main(int argc, char **argv) {
 
     // shader configuration
     // --------------------
-    shader.use();
-    shader.setInt("texture1", 0);
+    depth_shader.use();
+    depth_shader.setInt("texture1", 0);
 
     // https://dev.theomader.com/depth-precision/
     // https://nlguillemot.wordpress.com/2016/12/07/reversed-z-in-opengl/
@@ -352,29 +351,23 @@ int main(int argc, char **argv) {
     // render loop
 
     int width, height;
-    int numImages = 4;
-    float rotationAngle_per_image = 2.0f * glm::pi<float>() / numImages;
+    int numImages = 2;
     glfwGetWindowSize(window, &width, &height);
 
-    GLfloat * cylindrical_proj_imageArr[numImages] = {NULL, NULL, NULL, NULL};
+    GLfloat *depth_image = NULL;
+    GLubyte *rgb_image = NULL;
+    int numchannels = 4;
     glm::mat4 views[numImages];
-    for (int i = 0; i < numImages; i++) {
-        views[i] = glm::mat4(1.0f);
-        cylindrical_proj_imageArr[i] = (GLfloat *) realloc(cylindrical_proj_imageArr[i], sizeof (GLfloat) * width * height);
-    }
+    views[0] = glm::mat4(1.0f);
+    views[1] = glm::mat4(1.0f);
+    depth_image = (GLfloat *) realloc(depth_image, sizeof (GLfloat) * width * height);
+    rgb_image = (GLubyte *) realloc(rgb_image, sizeof (GLubyte) * width * height * numchannels);
 
     //camera.Zoom = glm::pi<float>() / 2.0f;
-    camera.Zoom = 90.0f;
+    camera.Zoom = 90.0f; // field of view in degrees
     int imageIdx = 0;
-    glm::vec3 frontVec = camera.Front;
 
-    std::vector<glm::vec4> vertexCoordList;
-    std::vector<glm::vec3> vertexColorList;
-    std::vector<glm::u32vec3> vertexCoordIndexList;
-    std::vector<glm::u32vec3> vertexColorIndexList;
-    vertexColorList.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
-    vertexColorList.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
-
+    Shader *currentShader;
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -388,6 +381,16 @@ int main(int argc, char **argv) {
             processInput(window);
         }
 
+        switch (imageIdx) {
+            case 0:
+                currentShader = &depth_shader;
+                break;
+            case 1:
+            default:
+                currentShader = &rgb_shader;
+                break;
+        }
+
         // render
         // ------
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -399,17 +402,10 @@ int main(int argc, char **argv) {
         glDepthFunc(GL_GREATER);
         //glEnable(GL_DEPTH_TEST);
 
-        shader.use();
+        currentShader->use();
         model = glm::mat4(1.0f);
         //glm::mat4 view = glm::mat4(1.0f);
         //glm::mat4 view = camera.GetViewMatrix();
-        if (imageIdx < numImages) {
-            glm::mat4 rotateMat4 = glm::rotate(glm::mat4(1.0f), imageIdx * rotationAngle_per_image, camera.Up);
-            glm::vec4 rotatedFront = rotateMat4 * glm::vec4(frontVec, 1.0f);
-            camera.Front.x = rotatedFront.x;
-            camera.Front.y = rotatedFront.y;
-            camera.Front.z = rotatedFront.z;
-        }
         glm::mat4 view = camera.GetViewMatrix();
 
         //glm::mat4 projection = glm::mat4(1.0f);
@@ -420,58 +416,58 @@ int main(int argc, char **argv) {
         //projection = perspectiveTransform(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, zNear, zFar);
         //projection = inversePerspectiveTransform(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, zNear, zFar);
 
-        shader.setFloat("near", zNear);
-        shader.setFloat("far", zFar);
-        shader.setMat4("view", view);
-        shader.setMat4("projection", projection);
+        currentShader->setFloat("near", zNear);
+        currentShader->setFloat("far", zFar);
+        currentShader->setMat4("view", view);
+        currentShader->setMat4("projection", projection);
 
         if (loadedModel != NULL) {
             model = glm::mat4(1.0f);
-            shader.setMat4("model", model);
-            ourModel.Draw(shader);
-            delete(loadedModel);            
+            currentShader->setMat4("model", model);
+            ourModel.Draw(depth_shader);
+            delete(loadedModel);
         } else if (USE_BUILTIN_SCENE) {
             // cubes
             glBindVertexArray(cubeVAO);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, cubeTexture);
             model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -4.0f));
-            shader.setMat4("model", model);
+            currentShader->setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(2.0f, 0.0f, -3.0f));
-            shader.setMat4("model", model);
+            currentShader->setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             // floor
             glBindVertexArray(planeVAO);
 
             glBindTexture(GL_TEXTURE_2D, floorTexture);
-            shader.setMat4("model", glm::mat4(1.0f));
+            currentShader->setMat4("model", glm::mat4(1.0f));
             glDrawArrays(GL_TRIANGLES, 0, 6);
             glBindVertexArray(0);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 0.0f, 10.0f));
-            shader.setMat4("model", model);
-            ourModel.Draw(shader);
+            currentShader->setMat4("model", model);
+            ourModel.Draw(depth_shader);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 0.0f, -10.0f));
             //model = glm::rotate(model, glm::pi<float>() / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-            shader.setMat4("model", model);
-            ourModel.Draw(shader);
+            currentShader->setMat4("model", model);
+            ourModel.Draw(depth_shader);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(10.0f, 0.0f, 0.0f));
             //model = glm::rotate(model, glm::pi<float>() / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-            shader.setMat4("model", model);
-            ourModel.Draw(shader);
+            currentShader->setMat4("model", model);
+            ourModel.Draw(depth_shader);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(-10.0f, 0.0f, 0.0f));
             //model = glm::rotate(model, glm::pi<float>() / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-            shader.setMat4("model", model);
-            ourModel.Draw(shader);
+            currentShader->setMat4("model", model);
+            ourModel.Draw(depth_shader);
         }
         // reset the comparison and depth state back to OpenGL defaults, 
         // so the state doesn’t leak into other code that might not be doing 
@@ -483,86 +479,76 @@ int main(int argc, char **argv) {
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
-        //glfwSetWindowShouldClose(window, true);
-
-        if (imageIdx < numImages) {
-            glReadBuffer(GL_FRONT);
-            views[imageIdx] = view;
-            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, cylindrical_proj_imageArr[imageIdx++]);
+        if (imageIdx == numImages) {
+            glfwSetWindowShouldClose(window, true);
         }
+
+        switch (imageIdx) {
+            case 0:
+                glReadBuffer(GL_FRONT);
+                views[imageIdx] = view;
+                glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depth_image);
+                imageIdx++;
+                break;
+            case 1:
+                glReadBuffer(GL_FRONT);
+                views[imageIdx] = view;
+                glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgb_image);
+                imageIdx++;
+                break;
+            default:
+                break;
+        }
+
     }
 
     glm::mat4 projection_inv = glm::inverse(projection);
     //FILE *f = fopen("ptcloud.data", "w");
+    FILE *f_depth = fopen("image_depth.data", "w");
     glm::f32vec4 pos;
-    int i, j, k, cur;
+    int i, j, cur;
     for (i = 0; i < height; i++) {
-        for (k = 0; k < numImages; k++) {
-            glm::mat4 view_inv = glm::inverse(views[k]);
-            for (j = 0; j < width; j++) {
-                cur = ((height - i - 1) * width + j);
-                pos.x = (float) 2.0f * j / width - 1.0f;
-                pos.y = (float) 2.0f * i / height - 1.0f;
-                //pos.z = pixels[cur] * 2.0f - 1.0f;
-                pos.z = cylindrical_proj_imageArr[k][cur];
-                if (pos.z < 1.0e-6f) { // max Z is 1/1.0e-6f
-                    pos.z = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (MAX_RANGE * MAX_RANGE);
-                }
-                pos.w = 1.0f;
-
-                glm::f32vec4 pos3d = view_inv * projection_inv * pos;
-                pos3d.x /= pos3d.w;
-                pos3d.y /= pos3d.w;
-                pos3d.z /= pos3d.w;
-                if (i % 100 == 0 && j % 100 == 0) {
-                    //printf("%f %f %f\n", pos.x, pos.y, pos.z);
-                    printf("%f %f %f\n", pos3d.x, pos3d.y, pos3d.z);
-                }
-                //fprintf(f, "%f %f %f\n", pos3d.x, pos3d.y, pos3d.z);
-
-                vertexCoordList.push_back(pos3d);
-                if (i > 0 && j > 0) {
-                    int offsetA = (i - 1) * width * numImages + j + k * width;
-                    int offsetB = i * width * numImages + j + k * width;
-                    vertexCoordIndexList.push_back(glm::u32vec3(offsetA, offsetA + 1, offsetB));
-                    vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetA + 1, offsetB + 1));
-                    vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
-                }
+        glm::mat4 view_inv = glm::inverse(views[0]);
+        for (j = 0; j < width; j++) {
+            cur = ((height - i - 1) * width + j);
+            pos.x = (float) 2.0f * j / width - 1.0f;
+            pos.y = (float) 2.0f * i / height - 1.0f;
+            //pos.z = pixels[cur] * 2.0f - 1.0f;
+            pos.z = depth_image[cur];
+            if (pos.z < 1.0e-6f) { // max Z is 1/1.0e-6f
+                //pos.z = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (MAX_RANGE * MAX_RANGE);
+                pos.z = -2.0f / (15.0f * 15.0f);
             }
+            pos.w = 1.0f;
+
+            glm::f32vec4 pos3d = view_inv * projection_inv * pos;
+            pos3d.x /= pos3d.w;
+            pos3d.y /= pos3d.w;
+            pos3d.z /= pos3d.w;
+            //if (i % 100 == 0 && j % 100 == 0) {
+            //    printf("%f %f %f\n", pos3d.x, pos3d.y, pos3d.z);
+            //}
+            fprintf(f_depth, "%f ", -pos3d.z);
+            //fprintf(f, "%f %f %f\n", pos3d.x, pos3d.y, pos3d.z);
         }
+        fprintf(f_depth, "\n");
     }
     //fclose(f);
+    fclose(f_depth);
 
-
-    FILE *fobj = fopen(outputfile.c_str(), "w");
-    for (glm::vec4 vertex : vertexCoordList) {
-        fprintf(fobj, "v %f %f %f\n", vertex.x, vertex.y, vertex.z);
-    }
-    for (glm::u32vec3 face : vertexCoordIndexList) {
-        fprintf(fobj, "f %d %d %d\n", face.x, face.y, face.z);
-    }
-    fclose(fobj);
 
     //int width, height;
     glfwGetWindowSize(window, &width, &height);
     //snprintf(filename, SCREENSHOT_MAX_FILENAME, "tmp.%d.png", nframes);
-    screenshot_png("depth_screenshot.png", width, height);
-    screenshot_float("depth_float_screenshot.png", width, height);
+    screenshot_png("image_rgb.png", width, height);
+    //screenshot_float("depth_float_screenshot.png", width, height);
 
     //glm::mat4 model = glm::mat4(1.0f);
     //glm::mat4 view = camera.GetViewMatrix();
     //glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, zNear, zFar);
 
-    GLfloat *pixels = NULL;
-    pixels = (GLfloat *) realloc(pixels, sizeof (GLfloat) * width * height);
-    glReadBuffer(GL_FRONT);
-    glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
-
-    free(pixels);
-
-    for (int i = 0; i < numImages; i++) {
-        free(cylindrical_proj_imageArr[i]);
-    }
+    free(depth_image);
+    free(rgb_image);
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
