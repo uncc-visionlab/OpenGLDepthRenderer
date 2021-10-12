@@ -1,0 +1,20 @@
+# OpenGLDepthRenderer
+To run the code you will need a OpenGL 4.5 compatible graphics card as I use a couple of recent OpenGL tricks (namely glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);) which required OpenGL 4.5.
+
+The code also requires the following:
+
+the glfw library (https://www.glfw.org/) which can be installed as libglfw-dev on ubuntu machines.
+
+the libpng library (http://www.libpng.org/pub/png/libpng.html) which can be installed as libpng-dev on ubuntu machines.
+
+Compilation will generate (4) targets:
+
+(1) OpenGLModelRenderer - this program renders a scene and will show textures on surfaces for a more realistic world
+
+(2) OpenGLDepthRenderer - this program renders only the scene depth as a grayscale, it will look strange and unrealistic
+
+(3) ogl_depthrenderer - this program implements inverse Z depth rendering which makes important accuracy improvements in the OpenGL depth values.
+
+(4) ogl_ML_data_augmenter - this program is part of a research effort that generates 3D models and simulates their sensed depth images, RGB images and the correct class labels for the purposes of training ML algorithms to recognize these objects.
+
+The output of the ogl_depthrenderer is the OBJ format surface mesh.
