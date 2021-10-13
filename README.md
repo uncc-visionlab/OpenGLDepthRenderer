@@ -7,7 +7,7 @@ The code also requires the following:
 
 * [glfw library](https://www.glfw.org/) which can be installed as libglfw-dev on ubuntu machines.
 
-* [libpng library] (http://www.libpng.org/pub/png/libpng.html) which can be installed as libpng-dev on ubuntu machines.
+* [libpng library](http://www.libpng.org/pub/png/libpng.html) which can be installed as libpng-dev on ubuntu machines.
 
 ## Programs in this repository
 
