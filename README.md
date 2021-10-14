@@ -1,5 +1,5 @@
 # OpenGLDepthRenderer
-To run the code you will need a OpenGL 4.5 compatible graphics card as I use a couple of recent OpenGL tricks. Specifically, to obtain reasonable depth accuracy across the floating point numeric gamut I am using ```glClipControl()``` which requires OpenGL 4.5. To address floating point depth quantization issues as discussed in this article describing important [depth image precision considerations](https://developer.nvidia.com/content/depth-precision-visualized).
+To run the code you will need an OpenGL 4.5 compatible graphics card as I use a couple of recent OpenGL tricks. Specifically, to obtain reasonable depth accuracy across the floating point numeric gamut I am using ```glClipControl()``` which requires OpenGL 4.5. To address floating point depth quantization issues as discussed in this article describing important [depth image precision considerations](https://developer.nvidia.com/content/depth-precision-visualized).
 
 ## Dependencies
 
