@@ -366,6 +366,8 @@ int main(int argc, char **argv) {
     }
 
     //camera.Zoom = glm::pi<float>() / 2.0f;
+    camera.Up = glm::vec3(0.0f, 0.0f, 1.0f);
+    camera.Front = glm::vec3(1.0f, 0.0f, 0.0f);
     camera.Zoom = 90.0f;
     int imageIdx = 0;
     glm::vec3 frontVec = camera.Front;
