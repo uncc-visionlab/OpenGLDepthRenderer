@@ -146,15 +146,7 @@ int main(int argc, char **argv) {
     }
     std::string inputfile;
     bool USE_BUILTIN_SCENE = false;
-    Model *loadedModel = NULL;
-    if (result.count("input")) {
-        inputfile = result["input"].as<std::string>();
-        loadedModel = new Model(inputfile);
-
-    } else {
-        std::cout << "No input file provided. Using the default scene" << std::endl;
-        USE_BUILTIN_SCENE = true;
-    }
+    
     std::string outputfile = result["output"].as<std::string>();
     float target_x = result["x"].as<float>();
     float target_y = result["y"].as<float>();
@@ -197,6 +189,15 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    Model *loadedModel = NULL;    
+    if (result.count("input")) {
+        inputfile = result["input"].as<std::string>();
+        loadedModel = new Model(inputfile);
+    } else {
+        std::cout << "No input file provided. Using the default scene" << std::endl;
+        USE_BUILTIN_SCENE = true;
+    }
+
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
@@ -222,9 +223,10 @@ int main(int argc, char **argv) {
     // -------------------------
     Shader depth_shader("depth_testing_revZ.vs", "depth_testing_revZ.fs");
     Shader rgb_shader("model_loading.vs", "model_loading.fs");
-
+    
     //Model ourModel(FileSystem::getPath("resources/objects/backpack/backpack.obj"));
     Model ourModel("../../resources/objects/backpack/backpack.obj");
+    //Model ourModel("/home/jzhang72/Downloads/objs/coffeecup/coffeecup.obj");
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     float cubeVertices[] = {
@@ -308,8 +310,8 @@ int main(int argc, char **argv) {
 
     // load textures
     // -------------
-    unsigned int cubeTexture = loadTexture(FileSystem::getPath("resources/textures/marble.jpg").c_str());
-    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/metal.png").c_str());
+    unsigned int cubeTexture = loadTexture("../../resources/textures/marble.jpg");
+    unsigned int floorTexture = loadTexture("../../resources/textures/metal.png");
 
     // shader configuration
     // --------------------
@@ -424,8 +426,7 @@ int main(int argc, char **argv) {
         if (loadedModel != NULL) {
             model = glm::mat4(1.0f);
             currentShader->setMat4("model", model);
-            ourModel.Draw(depth_shader);
-            delete(loadedModel);
+            loadedModel->Draw(*currentShader);           
         } else if (USE_BUILTIN_SCENE) {
             // cubes
             glBindVertexArray(cubeVAO);
@@ -449,25 +450,25 @@ int main(int argc, char **argv) {
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 0.0f, 10.0f));
             currentShader->setMat4("model", model);
-            ourModel.Draw(depth_shader);
+            ourModel.Draw(*currentShader);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 0.0f, -10.0f));
             //model = glm::rotate(model, glm::pi<float>() / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
             currentShader->setMat4("model", model);
-            ourModel.Draw(depth_shader);
+            ourModel.Draw(*currentShader);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(10.0f, 0.0f, 0.0f));
             //model = glm::rotate(model, glm::pi<float>() / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
             currentShader->setMat4("model", model);
-            ourModel.Draw(depth_shader);
+            ourModel.Draw(*currentShader);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(-10.0f, 0.0f, 0.0f));
             //model = glm::rotate(model, glm::pi<float>() / 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
             currentShader->setMat4("model", model);
-            ourModel.Draw(depth_shader);
+            ourModel.Draw(*currentShader);
         }
         // reset the comparison and depth state back to OpenGL defaults, 
         // so the state doesn’t leak into other code that might not be doing 
@@ -501,6 +502,7 @@ int main(int argc, char **argv) {
         }
 
     }
+    delete loadedModel;
 
     glm::mat4 projection_inv = glm::inverse(projection);
     //FILE *f = fopen("ptcloud.data", "w");

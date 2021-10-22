@@ -147,15 +147,7 @@ int main(int argc, char **argv) {
     }
     std::string inputfile;
     bool USE_BUILTIN_SCENE = false;
-    Model *loadedModel = NULL;
-    if (result.count("input")) {
-        inputfile = result["input"].as<std::string>();
-        loadedModel = new Model(inputfile);
 
-    } else {
-        std::cout << "No input file provided. Using the default scene" << std::endl;
-        USE_BUILTIN_SCENE = true;
-    }
     std::string outputfile = result["output"].as<std::string>();
     float target_x = result["x"].as<float>();
     float target_y = result["y"].as<float>();
@@ -191,12 +183,22 @@ int main(int argc, char **argv) {
     glfwSetScrollCallback(window, scroll_callback);
 
     // tell GLFW to capture our mouse
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     // glad: load all OpenGL function pointers
     // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
+    }
+
+    Model *loadedModel = NULL;
+    if (result.count("input")) {
+        inputfile = result["input"].as<std::string>();
+        loadedModel = new Model(inputfile);
+
+    } else {
+        std::cout << "No input file provided. Using the default scene" << std::endl;
+        USE_BUILTIN_SCENE = true;
     }
 
     // configure global opengl state
@@ -309,8 +311,8 @@ int main(int argc, char **argv) {
 
     // load textures
     // -------------
-    unsigned int cubeTexture = loadTexture(FileSystem::getPath("resources/textures/marble.jpg").c_str());
-    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/metal.png").c_str());
+    unsigned int cubeTexture = loadTexture(FileSystem::getPath("../../resources/textures/marble.jpg").c_str());
+    unsigned int floorTexture = loadTexture(FileSystem::getPath("../../resources/textures/metal.png").c_str());
 
     // shader configuration
     // --------------------
@@ -429,7 +431,6 @@ int main(int argc, char **argv) {
             model = glm::mat4(1.0f);
             shader.setMat4("model", model);
             ourModel.Draw(shader);
-            delete(loadedModel);            
         } else if (USE_BUILTIN_SCENE) {
             // cubes
             glBindVertexArray(cubeVAO);
@@ -491,6 +492,7 @@ int main(int argc, char **argv) {
             glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, cylindrical_proj_imageArr[imageIdx++]);
         }
     }
+    delete(loadedModel);
 
     glm::mat4 projection_inv = glm::inverse(projection);
     //FILE *f = fopen("ptcloud.data", "w");
