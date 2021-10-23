@@ -31,7 +31,7 @@ unsigned int SCR_WIDTH = 600;
 unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 0.0f, 0.0f);
+Camera camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0.0f, 0.0f);
 float lastX = (float) SCR_WIDTH / 2.0;
 float lastY = (float) SCR_HEIGHT / 2.0;
 bool firstMouse = true;
@@ -521,6 +521,9 @@ int main(int argc, char **argv) {
                 pos3d.x /= pos3d.w;
                 pos3d.y /= -pos3d.w;
                 pos3d.z /= pos3d.w;
+                //pos3d.x -= 0*camera.Position.x;
+                pos3d.y += 2*camera.Position.y;
+                //pos3d.z -= camera.Position.z;
                 if (i % 100 == 0 && j % 100 == 0) {
                     //printf("%f %f %f\n", pos.x, pos.y, pos.z);
                     printf("%f %f %f\n", pos3d.x, pos3d.y, pos3d.z);
