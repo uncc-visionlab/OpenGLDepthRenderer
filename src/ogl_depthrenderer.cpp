@@ -31,7 +31,7 @@ unsigned int SCR_WIDTH = 600;
 unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 0.0f, 0.0f);
 float lastX = (float) SCR_WIDTH / 2.0;
 float lastY = (float) SCR_HEIGHT / 2.0;
 bool firstMouse = true;
@@ -366,8 +366,11 @@ int main(int argc, char **argv) {
     }
 
     //camera.Zoom = glm::pi<float>() / 2.0f;
-    camera.Up = glm::vec3(0.0f, 0.0f, 1.0f);
+    //camera.Up = glm::vec3(0.0f, 0.0f, 1.0f);
     camera.Front = glm::vec3(1.0f, 0.0f, 0.0f);
+    //camera.Yaw = 0;
+    //camera.Pitch = 0;
+    //camera.WorldUp = glm::vec3(0.0f, 0.0f, 1.0f);
     camera.Zoom = 90.0f;
     int imageIdx = 0;
     glm::vec3 frontVec = camera.Front;
@@ -432,7 +435,7 @@ int main(int argc, char **argv) {
         if (loadedModel != NULL) {
             model = glm::mat4(1.0f);
             shader.setMat4("model", model);
-            ourModel.Draw(shader);
+            loadedModel->Draw(shader);
         } else if (USE_BUILTIN_SCENE) {
             // cubes
             glBindVertexArray(cubeVAO);
@@ -516,7 +519,7 @@ int main(int argc, char **argv) {
 
                 glm::f32vec4 pos3d = view_inv * projection_inv * pos;
                 pos3d.x /= pos3d.w;
-                pos3d.y /= pos3d.w;
+                pos3d.y /= -pos3d.w;
                 pos3d.z /= pos3d.w;
                 if (i % 100 == 0 && j % 100 == 0) {
                     //printf("%f %f %f\n", pos.x, pos.y, pos.z);
