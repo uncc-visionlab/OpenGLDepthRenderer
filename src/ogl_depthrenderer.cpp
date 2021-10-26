@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
     camera.Position.x = target_x;
     camera.Position.y = target_y;
     camera.Position.z = target_z;
-    float MAX_RANGE = result["radius"].as<float>();
+    float MAX_DEPTH = result["radius"].as<float>();
     SCR_WIDTH = result["rx"].as<unsigned int>();
     SCR_HEIGHT = result["ry"].as<unsigned int>();
     // glfw: initialize and configure
@@ -354,15 +354,19 @@ int main(int argc, char **argv) {
     // render loop
 
     int width, height;
-    int numImages = 4;
-    float rotationAngle_per_image = 2.0f * glm::pi<float>() / numImages;
+    
     glfwGetWindowSize(window, &width, &height);
 
-    GLfloat * cylindrical_proj_imageArr[numImages] = {NULL, NULL, NULL, NULL};
+    int numImages = 4;
+    //float rotationAngle_per_image = 2.0f * glm::pi<float>() / numImages;
+    float camera_theta[] = {0.0, 90.0f, 180.0f, 270.0f, 0.0f, 0.0f};
+    //float camera_phi[] = {0.0, 0.0f, 0.0f, 0.0f, 90.0f, -90.0f};
+    GLfloat * depth_imageArr[numImages];
     glm::mat4 views[numImages];
     for (int i = 0; i < numImages; i++) {
         views[i] = glm::mat4(1.0f);
-        cylindrical_proj_imageArr[i] = (GLfloat *) realloc(cylindrical_proj_imageArr[i], sizeof (GLfloat) * width * height);
+        depth_imageArr[i] = NULL;
+        depth_imageArr[i] = (GLfloat *) realloc(depth_imageArr[i], sizeof (GLfloat) * width * height);
     }
 
     //camera.Zoom = glm::pi<float>() / 2.0f;
@@ -411,7 +415,7 @@ int main(int argc, char **argv) {
         //glm::mat4 view = glm::mat4(1.0f);
         //glm::mat4 view = camera.GetViewMatrix();
         if (imageIdx < numImages) {
-            glm::mat4 rotateMat4 = glm::rotate(glm::mat4(1.0f), imageIdx * rotationAngle_per_image, camera.Up);
+            glm::mat4 rotateMat4 = glm::rotate(glm::mat4(1.0f), camera_theta[imageIdx], camera.Up);
             glm::vec4 rotatedFront = rotateMat4 * glm::vec4(frontVec, 1.0f);
             camera.Front.x = rotatedFront.x;
             camera.Front.y = rotatedFront.y;
@@ -489,18 +493,21 @@ int main(int argc, char **argv) {
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
-        //glfwSetWindowShouldClose(window, true);
+        if (imageIdx >= numImages) {
+            glfwSetWindowShouldClose(window, true);
+        }
 
         if (imageIdx < numImages) {
             glReadBuffer(GL_FRONT);
             views[imageIdx] = view;
-            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, cylindrical_proj_imageArr[imageIdx++]);
+            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depth_imageArr[imageIdx++]);
         }
     }
     delete(loadedModel);
 
     glm::mat4 projection_inv = glm::inverse(projection);
     //FILE *f = fopen("ptcloud.data", "w");
+    //float z_at_max_r;
     glm::f32vec4 pos;
     int i, j, k, cur;
     for (i = 0; i < height; i++) {
@@ -511,18 +518,31 @@ int main(int argc, char **argv) {
                 pos.x = (float) 2.0f * j / width - 1.0f;
                 pos.y = (float) 2.0f * i / height - 1.0f;
                 //pos.z = pixels[cur] * 2.0f - 1.0f;
-                pos.z = cylindrical_proj_imageArr[k][cur];
-                if (pos.z < 1.0e-6f) { // max Z is 1/1.0e-6f
-                    pos.z = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (MAX_RANGE * MAX_RANGE);
+                pos.z = depth_imageArr[k][cur];
+                //if (std::abs(pos.z) < 1.0e-6f) { // max Z is 1/1.0e-7f
+                //    pos.z = (pos.z > 0) ? 1.0e-6f : -1.0e-6f;
+                //}
+                //if (std::sqrt(pos.x * pos.x + pos.y * pos.y + (1/pos.z)*(1/pos.z)) > MAX_RANGE) {
+                //if (std::abs(pos.z) < 1.0e-6f) { // max Z is 1/1.0e-7f
+                if (std::abs(pos.z) < 2.0f / (MAX_DEPTH * MAX_DEPTH)) { // max Z is 1/1.0e-7f
+                    //z_at_max_r = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (MAX_RANGE * MAX_RANGE);
+                    //pos.z = z_at_max_r;
+                    pos.z = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (MAX_DEPTH * MAX_DEPTH);
                 }
                 pos.w = 1.0f;
 
                 glm::f32vec4 pos3d = view_inv * projection_inv * pos;
+                
+                /// reconstruct the radius of the point (x,y,z) --> (r, theta, phi)
+                // compare on r and if greater set r = r0
+                // what is height? --> if H = Y-axis value, coordinate system point
+                // p=(x,y,z) height = HeightAxis,p
+               
                 pos3d.x /= pos3d.w;
                 pos3d.y /= -pos3d.w;
                 pos3d.z /= pos3d.w;
                 //pos3d.x -= 0*camera.Position.x;
-                pos3d.y += 2*camera.Position.y;
+                pos3d.y += 2 * camera.Position.y;
                 //pos3d.z -= camera.Position.z;
                 if (i % 100 == 0 && j % 100 == 0) {
                     //printf("%f %f %f\n", pos.x, pos.y, pos.z);
@@ -571,7 +591,7 @@ int main(int argc, char **argv) {
     free(pixels);
 
     for (int i = 0; i < numImages; i++) {
-        free(cylindrical_proj_imageArr[i]);
+        free(depth_imageArr[i]);
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
