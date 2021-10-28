@@ -36,18 +36,6 @@ public:
     std::string id;
 };
 
-class YAML_Material : public YAML_Object {
-public:
-
-    bool parse(const YAML::Node& object);
-    //MaterialParameterGUI::MaterialParameterGUIPtr getMaterial();
-
-    std::string name;
-    std::string shader_program;
-    std::vector<std::string> data_types;
-    std::vector<float> data_values;
-};
-
 class YAML_Camera : public YAML_Object {
 public:
 
@@ -74,7 +62,7 @@ public:
         orientation_axis_angle = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
     }
     bool parse(const YAML::Node& camera);
-    //glm::mat4 getTransform();
+    glm::mat4 getTransform();
 
     glm::vec3 position;
     glm::vec4 orientation_axis_angle;
@@ -130,7 +118,6 @@ public:
     std::vector<YAML_Camera> cameras;
     std::vector<YAML_Primitive> primitives;
     std::vector<YAML_Mesh> meshes;
-    std::vector<YAML_Material> materials;
     std::vector<YAML_Light> lights;
     bool parse(const std::string);
 };

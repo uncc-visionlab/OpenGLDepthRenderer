@@ -19,6 +19,8 @@
 
 #include <iostream>
 
+#include <glm/gtc/matrix_transform.hpp>
+
 // YAML_Object
 
 bool YAML_Object::parse(const YAML::Node& object) {
@@ -41,7 +43,6 @@ bool YAML_Config::parse(const std::string filenameYAMLConfig) {
     std::vector<YAML_Camera>& cameras_yaml = cameras;
     std::vector<YAML_Primitive>& primitives_yaml = primitives;
     std::vector<YAML_Mesh>& meshes_yaml = meshes;
-    std::vector<YAML_Material>& materials_yaml = materials;
     std::vector<YAML_Light>& lights_yaml = lights;
 
     for (YAML::iterator it = doc.begin(); it != doc.end(); ++it) {
@@ -68,13 +69,6 @@ bool YAML_Config::parse(const std::string filenameYAMLConfig) {
                 return false;
             }
             meshes_yaml.push_back(mesh_yaml);
-        } else if (it->first.Scalar() == "material") {
-            const YAML::Node& material_node = it->second;
-            YAML_Material material_yaml;
-            if (!material_yaml.parse(material_node)) {
-                return false;
-            }
-            materials_yaml.push_back(material_yaml);
         } else if (it->first.Scalar() == "light") {
             const YAML::Node& light_node = it->second;
             YAML_Light light_yaml;
@@ -273,24 +267,27 @@ bool YAML_Primitive::parse(const YAML::Node& primitive) {
 //    //return primitiveGeom;
 //}
 
-//glm::mat4 YAML_Object3D::getTransform() {
-//    glm::vec3 axis = optix::normalize(optix::make_float3(orientation_axis_angle.x, orientation_axis_angle.y, orientation_axis_angle.z));
-//    glm::mat4 transform = (orientation_axis_angle.w == 0 || std::abs(optix::length(axis) - 1.0f) > 1e-3f) ?
-//            optix::Matrix4x4::identity() :
-//            optix::Matrix4x4::rotate(orientation_axis_angle.w * M_PIf / 180.0f, axis);
-//    transform[3] = position.x;
-//    transform[7] = position.y;
-//    transform[11] = position.z;
-//    float scales[] = {scale.x, scale.y, scale.z};
-//    if (scale.x != 1.0f || scale.y != 1.0f || scale.z != 1.0f) {
-//        for (int colIdx = 0; colIdx < 3; colIdx++) {
-//            for (int rowIdx = 0; rowIdx < 3; rowIdx++) {
-//                transform[colIdx + 4 * rowIdx] *= scales[colIdx];
-//            }
-//        }
-//    }
-//    return transform;
-//}
+glm::mat4 YAML_Object3D::getTransform() {
+    glm::vec3 axis = glm::normalize(glm::vec3(orientation_axis_angle.x, orientation_axis_angle.y, orientation_axis_angle.z));
+    glm::mat4 transform;
+    if (orientation_axis_angle.w == 0 || std::abs(glm::length(axis) - 1.0f) > 1e-3f) {
+    transform = glm::mat4(1.0f);
+    } else {
+            glm::rotate(transform, orientation_axis_angle.w * glm::pi<float>() / 180.0f, axis);
+    }
+    transform[0][3] = position.x;
+    transform[1][3] = position.y;
+    transform[2][3] = position.z;
+    float scales[] = {scale.x, scale.y, scale.z};
+    if (scale.x != 1.0f || scale.y != 1.0f || scale.z != 1.0f) {
+        for (int colIdx = 0; colIdx < 3; colIdx++) {
+            for (int rowIdx = 0; rowIdx < 3; rowIdx++) {
+                transform[colIdx + 4 * rowIdx] *= scales[colIdx];
+            }
+        }
+    }
+    return transform;
+}
 
 //void YAML_Light::generateGeometry(std::vector<VertexAttributes>& attributes, std::vector<unsigned int>& indices) {
 //    if (name == "parallelogram") {
@@ -361,86 +358,6 @@ bool YAML_Mesh::parse(const YAML::Node & mesh) {
 //
 //    meshLoader.loadMesh(mesh);
 //    return mesh;
-//}
-
-bool YAML_Material::parse(const YAML::Node & material) {
-    if (!material) {
-        return false;
-    }
-    if (!YAML_Object::parse(material)) {
-        return false;
-    }
-    if (material["name"]) {
-        name = material["name"].as<std::string>();
-    } else {
-        std::cout << "Error: material missing data format." << std::endl;
-        return false;
-    }
-    if (material["shader program"]) {
-        shader_program = material["shader program"].as<std::string>();
-    } else {
-        std::cout << "Error: material missing shader program." << std::endl;
-        return false;
-    }
-    if (material["data format"]) {
-        std::vector<std::string> data_formats;
-        YAML::Node nDataFormat = material["data format"];
-        for (unsigned int idx = 0; idx < nDataFormat.size(); idx++) {
-            data_formats.push_back(nDataFormat[idx].as<std::string>());
-        }
-        //std::cout << "location = (" << geometry_yaml.location.x << ", " << geometry_yaml.location.y << ", " << geometry_yaml.location.z << ")" << std::endl;
-    } else {
-        std::cout << "Error: material missing data format." << std::endl;
-        return false;
-    }
-    if (material["data values"] && material["data format"].size() == material["data values"].size()) {
-        YAML::Node nDataValues = material["data values"];
-        for (unsigned int idx = 0; idx < nDataValues.size(); idx++) {
-            data_values.push_back(nDataValues[idx].as<float>());
-            //            if (data_types[idx] == "float") {
-            //                data_values.push_back(nDataValues[idx].as<float>());
-            //            } else if (data_types[idx] == "int") {
-            //                data_values.push_back(nDataValues[idx].as<int>());
-            //            } else if (data_types[idx] == "bool") {
-            //                data_values.push_back(nDataValues[idx].as<bool>());
-            //            } else if (data_types[idx] == "string") {
-            //                data_values.push_back(nDataValues[idx].as<std::string>());
-            //            }
-        }
-        //std::cout << "location = (" << geometry_yaml.location.x << ", " << geometry_yaml.location.y << ", " << geometry_yaml.location.z << ")" << std::endl;
-    } else {
-        std::cout << "Error: material missing or mismatched data values and data format." << std::endl;
-        return false;
-    }
-    return true;
-}
-
-//MaterialParameterGUI::MaterialParameterGUIPtr YAML_Material::getMaterial() {
-//    MaterialParameterGUI::MaterialParameterGUIPtr material_ptr;
-//    material_ptr = std::make_shared<MaterialParameterGUI>();
-//    material_ptr->name = name;
-//    if (shader_program == "diffuse" || shader_program == "specular") {
-//        // albedo color only
-//        material_ptr->albedo = optix::make_float3(data_values[0], data_values[1], data_values[2]);
-//    } else if (shader_program == "specular-transmissive") {
-//        // albedo color, absorption color, volumeDistance scale, index of refraction, thin walled (boolean)
-//        material_ptr->albedo = optix::make_float3(data_values[0], data_values[1], data_values[2]);
-//        material_ptr->absorptionColor = optix::make_float3(data_values[3], data_values[4], data_values[5]);
-//        material_ptr->volumeDistanceScale = data_values[6];
-//        material_ptr->ior = data_values[7];
-//        material_ptr->thinwalled = (data_values[8] == 0) ? false : true;
-//    } else if (shader_program == "phong") {
-//        // albedo color, ambient color, specular color, refractive color, phong exp
-//        material_ptr->albedo = optix::make_float3(data_values[0], data_values[1], data_values[2]);
-//        material_ptr->Ka = optix::make_float3(data_values[3], data_values[4], data_values[5]);
-//        material_ptr->Ks = optix::make_float3(data_values[6], data_values[7], data_values[8]);
-//        material_ptr->Kr = optix::make_float3(data_values[9], data_values[10], data_values[11]);
-//        material_ptr->phong_exp = data_values[12];
-//    } else {
-//        std::cout << "Error: material shader program \"" << shader_program << "\" not recognized." << std::endl;
-//        //return false;
-//    }
-//    return material_ptr;
 //}
 
 bool YAML_Light::parse(const YAML::Node & light) {
