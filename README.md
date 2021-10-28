@@ -28,6 +28,7 @@ The output of the ogl_depthrenderer is the OBJ format surface mesh.
 ### Linux
 From the root of the source folder try the following command sequence in a console:
 ```
+git submodule update --init
 mkdir build
 cd build
 cmake ..

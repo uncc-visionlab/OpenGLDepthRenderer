@@ -1,0 +1,16 @@
+---
+ input_obj : "map.obj" # input file .obj defining scene
+ output_obj : "visibility_sphere.obj" # output file .obj of visibility volume
+ x: 0.00 # x position of target [meters]
+ y: 0.00 # y position of target [meters]
+ z: 0.00 # z position of target [meters]
+ rx: 400 # screen width [pixels]
+ ry: 400 # screen height [pixels]
+ clip_radius: true # enforce max radius below [true/false]
+ radius: 500.0 # max radius of visibility volume [meters]
+ clip_alt: true # enforce height constraints below [true/false]
+ max_alt: 400.0 # max height of visibility volume above ground plane [meters]
+ min_alt: 100.0 # min height of visibility volume above ground plane [meters]
+ hemisphere_views: true # default to five camera views covering hemisphere around target, otherwise enforce views below
+# optional
+# custom_views: # maybe some users might want to define numImages and rotationAngle_per_image as per lines 358-366, but I am not sure what the correct format would be... 

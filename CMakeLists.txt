@@ -69,8 +69,17 @@ set(LIBS ${LIBS} STB_IMAGE)
 add_library(GLAD "src/glad.c")
 set(LIBS ${LIBS} GLAD)
 
+add_library(YAMLCONFIG "src/YAML_Config.cpp")
+target_link_libraries(YAMLCONFIG yaml-cpp)
+set(LIBS ${LIBS} YAMLCONFIG)
+
 add_library(MISC src/model_export.cpp src/screenshots.cpp)
 set(LIBS ${LIBS} MISC)
+
+#########################################################
+# Build third party support library
+# yaml-cpp -> https://github.com/jbeder/yaml-cpp yaml-cpp is a YAML parser and emitter in C++ matching the YAML 1.2 spec.
+add_subdirectory(third_party)
 
 macro(makeLink src dest target)
   add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink ${src} ${dest}  DEPENDS  ${dest} COMMENT "mklink ${src} -> ${dest}")

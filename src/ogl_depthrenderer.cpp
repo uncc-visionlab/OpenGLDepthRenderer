@@ -15,6 +15,7 @@
 #include <learnopengl/model.h>
 
 #include "screenshots.hpp"
+#include "YAML_Config.hpp"
 
 #include <iostream>
 #include <string>
@@ -130,6 +131,7 @@ void cxxopts_integration(cxxopts::Options& options) {
             ("z", "z Position of the camera", cxxopts::value<float>()->default_value("0"))
             ("rx", "x resolution of the camera in pixels", cxxopts::value<unsigned int>()->default_value("600"))
             ("ry", "y resolution of the camera in pixels", cxxopts::value<unsigned int>()->default_value("600"))
+            ("c,config", "YAML config file.",  cxxopts::value<std::string>())
             ("r,radius", "Radius of visibility sphere", cxxopts::value<float>()->default_value("20"))
             ("o,output", "Output file <visibility_sphere.obj>", cxxopts::value<std::string>()->default_value("visibility_sphere.obj"))
             ("h,help", "Print usage")
@@ -148,6 +150,16 @@ int main(int argc, char **argv) {
     std::string inputfile;
     bool USE_BUILTIN_SCENE = false;
 
+    YAML_Config::YAML_ConfigPtr config_ptr;
+    std::string configfile;
+    if (result.count("config")) {
+        configfile = result["config"].as<std::string>();
+        config_ptr = std::make_shared<YAML_Config>();
+        if (!config_ptr->parse(configfile)) {
+            config_ptr = nullptr;
+        }
+    }
+    
     std::string outputfile = result["output"].as<std::string>();
     float target_x = result["x"].as<float>();
     float target_y = result["y"].as<float>();
@@ -195,7 +207,6 @@ int main(int argc, char **argv) {
     if (result.count("input")) {
         inputfile = result["input"].as<std::string>();
         loadedModel = new Model(inputfile);
-
     } else {
         std::cout << "No input file provided. Using the default scene" << std::endl;
         USE_BUILTIN_SCENE = true;
