@@ -1,16 +1,38 @@
----
+ 
  input_obj : "map.obj" # input file .obj defining scene
  output_obj : "visibility_sphere.obj" # output file .obj of visibility volume
- x: 0.00 # x position of target [meters]
- y: 0.00 # y position of target [meters]
- z: 0.00 # z position of target [meters]
- rx: 400 # screen width [pixels]
- ry: 400 # screen height [pixels]
- clip_radius: true # enforce max radius below [true/false]
- radius: 500.0 # max radius of visibility volume [meters]
- clip_alt: true # enforce height constraints below [true/false]
- max_alt: 400.0 # max height of visibility volume above ground plane [meters]
- min_alt: 100.0 # min height of visibility volume above ground plane [meters]
- hemisphere_views: true # default to five camera views covering hemisphere around target, otherwise enforce views below
+
+ camera:
+    id: Primary Camera
+    width: 250
+    height: 250
+    location: [160.0, 40.0, 0.0]
+    look at: [0, 0, 0]
+    type: pinhole
+    fov: [90, 90]
+#    type: orthographic
+#    scalef: [100, 100]
+ 
+ mesh:
+    id: Mesh 1
+    position : [0.0, 0.0, 0.0]
+    scale : 1.0
+    #orientation axis, angle: [0, 1, 0, 20]
+    format : OBJ
+    filename : T72.obj
+ 
+ target_1_visibility:
+    id: Volume 1
+    # enforce max radius below [true/false]
+    #clip_radius: true 
+    radius_max: 500.0 # max radius of visibility volume [meters] 
+    clip_altitude: true # enforce height constraints below [true/false]
+    altitude_origin: true # enforce height constraints below [true/false]
+    altitude_dir: [0.0, 1.0, 0.0]
+    altitude_max: 400.0 # max height of visibility volume above ground plane [meters]
+    altitude_min: 100.0 # min height of visibility volume above ground plane [meters]
+    hemisphere_views: true # default to five camera views covering hemisphere around target, otherwise enforce views below
+    output_file: visibility_vol01.obj
+    
 # optional
 # custom_views: # maybe some users might want to define numImages and rotationAngle_per_image as per lines 358-366, but I am not sure what the correct format would be... 
