@@ -1,28 +1,39 @@
- 
- input_obj : "map.obj" # input file .obj defining scene
- output_obj : "visibility_sphere.obj" # output file .obj of visibility volume
+ world_coord_sys:
+    id: world
+    origin: [0.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    front: [1.0, 0.0, 0.0]
 
- camera:
-    id: Primary Camera
-    width: 250
-    height: 250
-    location: [160.0, 40.0, 0.0]
-    look at: [0, 0, 0]
-    type: pinhole
-    fov: [90, 90]
-#    type: orthographic
-#    scalef: [100, 100]
- 
  mesh:
     id: Mesh 1
     position : [0.0, 0.0, 0.0]
     scale : 1.0
-    #orientation axis, angle: [0, 1, 0, 20]
+    orientation axis, angle: [1, 0, 0, 0]
     format : OBJ
-    filename : T72.obj
+    filename : map.obj
  
- target_1_visibility:
+ visibility_vol:
     id: Volume 1
+    # enforce max radius below [true/false]
+    #clip_radius: true 
+    id: world
+    width: 250
+    height: 250
+    origin: [160.0, 40.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    front: [1.0, 0.0, 0.0]
+    fov: 90
+    radius_max: 500.0 # max radius of visibility volume [meters] 
+    clip_altitude: true # enforce height constraints below [true/false]
+    altitude_origin: true # enforce height constraints below [true/false]
+    altitude_dir: [0.0, 1.0, 0.0]
+    altitude_max: 400.0 # max height of visibility volume above ground plane [meters]
+    altitude_min: 100.0 # min height of visibility volume above ground plane [meters]
+    hemisphere_views: true # default to five camera views covering hemisphere around target, otherwise enforce views below
+    output_file: visibility_vol01.obj
+
+ visibility_vol:
+    id: Volume 2
     # enforce max radius below [true/false]
     #clip_radius: true 
     radius_max: 500.0 # max radius of visibility volume [meters] 
@@ -32,7 +43,8 @@
     altitude_max: 400.0 # max height of visibility volume above ground plane [meters]
     altitude_min: 100.0 # min height of visibility volume above ground plane [meters]
     hemisphere_views: true # default to five camera views covering hemisphere around target, otherwise enforce views below
-    output_file: visibility_vol01.obj
+    output_file: visibility_vol02.obj
+    
     
 # optional
 # custom_views: # maybe some users might want to define numImages and rotationAngle_per_image as per lines 358-366, but I am not sure what the correct format would be... 

@@ -35,33 +35,25 @@ bool YAML_Object::parse(const YAML::Node& object) {
     return true;
 }
 
-// YAML_Scene
+// YAML_Config
 
 bool YAML_Config::parse(const std::string filenameYAMLConfig) {
     YAML::Node doc = YAML::LoadFile(filenameYAMLConfig);
 
-    std::vector<YAML_Camera>& cameras_yaml = cameras;
-    std::vector<YAML_Primitive>& primitives_yaml = primitives;
+    std::vector<YAML_VisibilityVolume>& visibility_volumes_yaml = visibility_volumes;
     std::vector<YAML_Mesh>& meshes_yaml = meshes;
-    std::vector<YAML_Light>& lights_yaml = lights;
+    std::vector<YAML_CoordinateSystem>& coordsystems_yaml = coordsystems;
 
     for (YAML::iterator it = doc.begin(); it != doc.end(); ++it) {
         std::cout << it->first << std::endl;
         std::cout << it->second << std::endl;
-        if (it->first.Scalar() == "camera") {
-            const YAML::Node& camera_node = it->second;
-            YAML_Camera& camera_yaml = camera;
-            if (!camera_yaml.parse(camera_node)) {
+        if (it->first.Scalar() == "visibility_vol") {
+            const YAML::Node& visibility_node = it->second;
+            YAML_VisibilityVolume visibility_vol_yaml;
+            if (!visibility_vol_yaml.parse(visibility_node)) {
                 return false;
             }
-            cameras_yaml.push_back(camera_yaml);
-        } else if (it->first.Scalar() == "primitive") {
-            const YAML::Node& primitive_node = it->second;
-            YAML_Primitive primitive_yaml;
-            if (!primitive_yaml.parse(primitive_node)) {
-                return false;
-            }
-            primitives_yaml.push_back(primitive_yaml);
+            visibility_volumes_yaml.push_back(visibility_vol_yaml);
         } else if (it->first.Scalar() == "mesh") {
             const YAML::Node& mesh_node = it->second;
             YAML_Mesh mesh_yaml;
@@ -69,72 +61,97 @@ bool YAML_Config::parse(const std::string filenameYAMLConfig) {
                 return false;
             }
             meshes_yaml.push_back(mesh_yaml);
-        } else if (it->first.Scalar() == "light") {
-            const YAML::Node& light_node = it->second;
-            YAML_Light light_yaml;
-            if (!light_yaml.parse(light_node)) {
+        } else if (it->first.Scalar() == "world_coord_sys") {
+            const YAML::Node& coordsys_node = it->second;
+            YAML_CoordinateSystem coordsys_yaml;
+            if (!coordsys_yaml.parse(coordsys_node)) {
                 return false;
             }
-            lights_yaml.push_back(light_yaml);
+            coordsystems_yaml.push_back(coordsys_yaml);
         }
     }
     return true;
 }
 
-bool YAML_Camera::parse(const YAML::Node& camera) {
+bool YAML_CoordinateSystem::parse(const YAML::Node& camera) {
     if (camera) {
-        if (camera["width"]) {
-            width = camera["width"].as<int>();
-        } else {
-            std::cout << "Error: camera has no height." << std::endl;
-            return false;
-        }
-        if (camera["height"]) {
-            height = camera["height"].as<int>();
-        } else {
-            std::cout << "Error: camera has height." << std::endl;
-            return false;
-        }
-        if (camera["location"] && camera["location"].size() == 3) {
-            YAML::Node nlocation = camera["location"];
-            location.x = nlocation[0].as<float>();
-            location.y = nlocation[1].as<float>();
-            location.z = nlocation[2].as<float>();
+        if (camera["origin"] && camera["origin"].size() == 3) {
+            YAML::Node nlocation = camera["origin"];
+            origin.x = nlocation[0].as<float>();
+            origin.y = nlocation[1].as<float>();
+            origin.z = nlocation[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: camera has no location." << std::endl;
+            std::cout << "Error: Coordinate system has no origin." << std::endl;
             return false;
         }
-        if (camera["look at"] && camera["look at"].size() == 3) {
-            YAML::Node nlookat = camera["look at"];
-            lookat.x = nlookat[0].as<float>();
-            lookat.y = nlookat[1].as<float>();
-            lookat.z = nlookat[2].as<float>();
+        if (camera["up"] && camera["up"].size() == 3) {
+            YAML::Node nlookat = camera["up"];
+            up.x = nlookat[0].as<float>();
+            up.y = nlookat[1].as<float>();
+            up.z = nlookat[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: camera has no point to look at." << std::endl;
+            std::cout << "Error: camera has no up vector." << std::endl;
             return false;
         }
-        if (camera["type"]) {
-            type = camera["type"].as<std::string>();
-            if (!type.empty()) {
-                if (type.compare("orthographic") == 0) {
-                    if (camera["scalef"]) {
-                        YAML::Node nscalef = camera["scalef"];
-                        ortho_scalef.x = nscalef[0].as<float>();
-                        ortho_scalef.y = nscalef[1].as<float>();
-                    }
-                } else if (type.compare("pinhole") == 0) {
-                    if (camera["fov"]) {
-                        YAML::Node nfov = camera["fov"];
-                        pinhole_fov.x = nfov[0].as<float>();
-                        pinhole_fov.y = nfov[1].as<float>();
-                    }
-                } else {
-                    std::cout << "Error: camera has no type." << std::endl;
-                    return false;
-                }
-            }
+        if (camera["front"] && camera["front"].size() == 3) {
+            YAML::Node nlookat = camera["front"];
+            front.x = nlookat[0].as<float>();
+            front.y = nlookat[1].as<float>();
+            front.z = nlookat[2].as<float>();
+            //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
+        } else {
+            std::cout << "Error: camera has no front vector." << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
+bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
+    if (visibility) {
+        if (visibility["width"]) {
+            width = visibility["width"].as<int>();
+        } else {
+            std::cout << "Error: Visibility volume has no width resolution." << std::endl;
+            return false;
+        }
+        if (visibility["height"]) {
+            height = visibility["height"].as<int>();
+        } else {
+            std::cout << "Error: Visibility volume has no height resolution." << std::endl;
+            return false;
+        }
+        if (visibility["origin"] && visibility["origin"].size() == 3) {
+            YAML::Node nlocation = visibility["origin"];
+            origin.x = nlocation[0].as<float>();
+            origin.y = nlocation[1].as<float>();
+            origin.z = nlocation[2].as<float>();
+            //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
+        } else {
+            std::cout << "Error: Visibility volume has no location." << std::endl;
+            return false;
+        }
+        if (visibility["up"] && visibility["up"].size() == 3) {
+            YAML::Node nup = visibility["up"];
+            up.x = nup[0].as<float>();
+            up.y = nup[1].as<float>();
+            up.z = nup[2].as<float>();
+            //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
+        } else {
+            std::cout << "Error: Visibility volume has no up vector." << std::endl;
+            return false;
+        }
+        if (visibility["front"] && visibility["front"].size() == 3) {
+            YAML::Node nfront = visibility["front"];
+            front.x = nfront[0].as<float>();
+            front.y = nfront[1].as<float>();
+            front.z = nfront[2].as<float>();
+            //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
+        } else {
+            std::cout << "Error: Visibility volume has no front vector." << std::endl;
+            return false;
         }
     }
     return true;
@@ -195,77 +212,6 @@ bool YAML_Object3D::parse(const YAML::Node& object3d) {
     }
     return true;
 }
-
-// YAML Primitive
-
-bool YAML_Primitive::parse(const YAML::Node& primitive) {
-    if (primitive) {
-        YAML_Object::parse(primitive);
-        YAML_Object3D::parse(primitive);
-        //Primitive myPrimitive;
-        if (primitive["type"]) {
-            primitive_type = primitive["type"].as<std::string>();
-            if (!primitive_type.empty()) {
-                if (primitive_type.compare("Plane") == 0) {
-                    //myPrimitive = Plane;
-                } else if (primitive_type.compare("Box") == 0) {
-                } else if (primitive_type.compare("Sphere") == 0) {
-
-                } else if (primitive_type.compare("Torus") == 0) {
-                } else {
-                    std::cout << "Error: primitive missing required type." << std::endl;
-                    return false;
-                }
-            }
-        }
-        if (primitive["parameters"]) {
-            YAML::Node nParameters = primitive["parameters"];
-            if ((primitive_type == "Plane" && nParameters.size() == 3) ||
-                    (primitive_type.compare("Box") == 0 && nParameters.size() == 0) ||
-                    (primitive_type.compare("Sphere") == 0 && nParameters.size() == 4) ||
-                    (primitive_type.compare("Torus") == 0 && nParameters.size() == 4)) {
-                for (unsigned int i = 0; i < nParameters.size(); i++) {
-                    parameters.push_back(nParameters[i].as<float>());
-                }
-            } else {
-                std::cout << "Incorrect number of parameters for " << primitive_type << "parsed size = "
-                        << nParameters.size() << std::endl;
-            }
-        }
-        if (parameters.size() == 0) {
-            std::cout << "Error: primitive missing required construction parameters using defaults." << std::endl;
-//            if (primitive_type == "Plane") {
-//                parameters.insert(parameters.end(), Plane::defaultParameters.begin(), Plane::defaultParameters.end());
-//            } else if (primitive_type.compare("Box") == 0) {
-//                parameters.insert(parameters.end(), Box::defaultParameters.begin(), Box::defaultParameters.end());
-//            } else if (primitive_type.compare("Sphere") == 0) {
-//                parameters.insert(parameters.end(), Sphere::defaultParameters.begin(), Sphere::defaultParameters.end());
-//            } else if (primitive_type.compare("Torus") == 0) {
-//                parameters.insert(parameters.end(), Torus::defaultParameters.begin(), Torus::defaultParameters.end());
-//            }
-        }
-        if (primitive["material"]) {
-            material = primitive["material"].as<std::string>();
-        } else {
-            std::cout << "Error: primitive missing required material assuming \"Default\" material." << std::endl;
-        }
-    }
-    return true;
-}
-
-//void YAML_Primitive::getGeometry(std::vector<VertexAttributes>& attributes, std::vector<unsigned int>& indices) {
-//    //optix::Geometry primitiveGeom;
-//    if (primitive_type == "Plane") {
-//        Plane::create(1, 1, 1, attributes, indices);
-//    } else if (primitive_type == "Box") {
-//        Box::create(0, 0, attributes, indices);
-//    } else if (primitive_type == "Sphere") {
-//        Sphere::create(180, 90, 1.0f, M_PIf, attributes, indices);
-//    } else if (primitive_type == "Torus") {
-//        Torus::create(180, 180, 0.75f, 0.25f, attributes, indices);
-//    }
-//    //return primitiveGeom;
-//}
 
 glm::mat4 YAML_Object3D::getTransform() {
     glm::vec3 axis = glm::normalize(glm::vec3(orientation_axis_angle.x, orientation_axis_angle.y, orientation_axis_angle.z));
@@ -359,49 +305,3 @@ bool YAML_Mesh::parse(const YAML::Node & mesh) {
 //    meshLoader.loadMesh(mesh);
 //    return mesh;
 //}
-
-bool YAML_Light::parse(const YAML::Node & light) {
-    if (!light) {
-        return false;
-    }
-    if (!YAML_Object::parse(light)) {
-        return false;
-    }
-    if (light["name"]) {
-        name = light["name"].as<std::string>();
-    } else {
-        std::cout << "Error: light missing name field." << std::endl;
-        return false;
-    }
-    if (light["intensity"]) {
-        intensity = light["intensity"].as<float>();
-    } else {
-        std::cout << "Error: light missing intensity field. Assuming intensity = " << intensity << "." << std::endl;
-    }
-    if (light["color"] && light["color"].size() == 3) {
-        YAML::Node nlight = light["color"];
-        color.x = nlight[0].as<float>();
-        color.y = nlight[1].as<float>();
-        color.z = nlight[2].as<float>();
-
-    } else {
-        std::cout << "Error: light missing color field assuming color = (" <<
-                color.x << "," << color.y << "," << color.z << ")." << std::endl;
-    }
-    if (name == "environmental") {
-        // environmental lights have no position/orientation infor
-        std::cout << "Environmental lighting is set to ON." << std::endl;
-    } else if (name == "parallelogram") {
-        if (YAML_Object3D::parse(light)) {
-            // parallelogram light            
-        } else {
-            std::cout << "Error: Light 3D pose could not be parsed." << std::endl;
-            return false;
-        }
-    } else {
-        // allow parsing of antennas 
-        //        std::cout << "Error: light having name " << name << " is not supported." << std::endl;
-        //        return false;
-    }
-    return true;
-}
