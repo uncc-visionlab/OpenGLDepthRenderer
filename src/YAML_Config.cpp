@@ -20,6 +20,9 @@
 #include <iostream>
 
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/ext.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 // YAML_Object
 
@@ -130,7 +133,7 @@ bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
             origin.z = nlocation[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: Visibility volume has no origin - Default (0,0,0) used." << std::endl;
+            std::cout << "Error: Visibility volume has no origin - Default " << glm::to_string(origin) << " used." << std::endl;
             //return false;
         }
         if (visibility["up"] && visibility["up"].size() == 3) {
@@ -140,7 +143,7 @@ bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
             up.z = nup[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: Visibility volume has no up vector - Default (0,1,0) used." << std::endl;
+            std::cout << "Error: Visibility volume has no up vector - Default " << glm::to_string(up) << " used." << std::endl;
             //return false;
         }
         if (visibility["front"] && visibility["front"].size() == 3) {
@@ -150,7 +153,7 @@ bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
             front.z = nfront[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: Visibility volume has no front vector - Default (1,0,0) used." << std::endl;
+            std::cout << "Error: Visibility volume has no front vector - Default " << glm::to_string(front) << " used." << std::endl;
             //return false;
         }
         if (visibility["fov_degrees"]) {
@@ -188,6 +191,7 @@ bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
 }
 
 // YAML Geometry
+
 bool YAML_Object3D::parse(const YAML::Node& object3d) {
     if (object3d) {
         if (object3d["position"] && object3d["position"].size() == 3) {
@@ -197,7 +201,7 @@ bool YAML_Object3D::parse(const YAML::Node& object3d) {
             position.z = nposition[2].as<float>();
             //std::cout << "location = (" << geometry_yaml.location.x << ", " << geometry_yaml.location.y << ", " << geometry_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: geometry missing position. Setting it to (0,0,0)." << std::endl;
+            std::cout << "Error: geometry missing position. Setting it to " << glm::to_string(position) << "." << std::endl;
             //return false;
         }
         if (object3d["orientation axis, angle"] && object3d["orientation axis, angle"].size() == 4) {
@@ -208,7 +212,7 @@ bool YAML_Object3D::parse(const YAML::Node& object3d) {
             orientation_axis_angle.w = nOrientation_axis_angle[3].as<float>();
             //std::cout << "location = (" << geometry_yaml.location.x << ", " << geometry_yaml.location.y << ", " << geometry_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: geometry missing orientation axis, angle. Setting it to y-axis (up) (0,1,0) angle = 0." << std::endl;
+            std::cout << "Error: geometry missing orientation axis, angle. Setting it to (x,y,z,theta) = " << glm::to_string(orientation_axis_angle) << "." << std::endl;
         }
         if (object3d["scale"]) {
             YAML::Node nscalef = object3d["scale"];
@@ -222,7 +226,7 @@ bool YAML_Object3D::parse(const YAML::Node& object3d) {
                 scale.z = nscalef[2].as<float>();
             }
         } else {
-            std::cout << "Error: geometry missing scale. Setting it to 1.0." << std::endl;
+            std::cout << "Error: geometry missing scale. Setting it to " << glm::to_string(scale) << "." << std::endl;
         }
     }
     return true;

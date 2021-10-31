@@ -8,6 +8,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/ext.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <learnopengl/filesystem.h>
 #include <learnopengl/shader_m.h>
@@ -21,6 +24,9 @@
 #include <string>
 #include <vector>
 
+
+#define DEBUG 0
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -28,9 +34,9 @@ void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 
 // settings
-unsigned int SCR_WIDTH = 600;
-unsigned int SCR_HEIGHT = 600;
-float zNear = 0.1f;
+unsigned int SCR_WIDTH = 300;
+unsigned int SCR_HEIGHT = 300;
+float zNear = 1.0e-0f;
 float zFar = 10.0f;
 
 // camera
@@ -122,17 +128,17 @@ inline glm::mat4 inversePerspectiveTransform(float fovY_radians, float aspectRat
             0.0f, 0.0f, 1.0f / B, A / B);
 }
 
-glm::vec3 EuclideanToSpherical(glm::vec3 euclid) {
+glm::vec3 EuclideanToSpherical(const glm::vec3& euclid) {
     float r = std::sqrt(euclid.x * euclid.x + euclid.y * euclid.y + euclid.z * euclid.z);
-    float theta = std::atan2(euclid.y, euclid.x);
-    float psi = std::acos(euclid.z / r);
+    float psi = std::atan2(euclid.y, euclid.x);
+    float theta = std::acos(euclid.z / r);
     return glm::vec3(r, theta, psi);
 }
 
-glm::vec3 SphericalToEuclidean(glm::vec3 spherical) {
-    float& r = spherical.x;
-    float& theta = spherical.y;
-    float& psi = spherical.z;
+glm::vec3 SphericalToEuclidean(const glm::vec3& spherical) {
+    const float& r = spherical.x;
+    const float& psi = spherical.y;
+    const float& theta = spherical.z;
     float x = r * std::cos(psi) * std::sin(theta);
     float y = r * std::sin(psi) * std::sin(theta);
     float z = r * std::cos(theta);
@@ -321,11 +327,19 @@ public:
         }
     }
 
-    void initializeDepthBuffers() {
+    void initializeWindowAndDepthBuffers(GLFWwindow* window) {
+        // resize window and allow calls to resize framebuffer        
+        glfwSetWindowSize(window, iWidth, iHeight);
+        // these calls are required per https://github.com/glfw/glfw/issues/1661
+        glfwPollEvents();
+        glfwWaitEvents();
+        
+        // initialize the depth buffers
         numImages = 4;
         currentImageIndex = 0;
         camera_thetas = (float *) realloc(camera_thetas, sizeof (float) * numImages);
         //float camera_phi[] = {0.0, 0.0f, 0.0f, 0.0f, 90.0f, -90.0f};
+        //float thetas[] = {0.0, 90.0f, 180.0f, 270.0f, 0.0f, 0.0f};
         float thetas[] = {0.0, 90.0f, 180.0f, 270.0f, 0.0f, 0.0f};
         for (unsigned int i = 0; i < numImages; i++) {
             camera_thetas[i] = thetas[i];
@@ -334,20 +348,9 @@ public:
         depth_imageArr = (GLfloat **) realloc(depth_imageArr, sizeof (GLfloat*) * numImages);
         for (unsigned int i = 0; i < numImages; i++) {
             //views[i] = glm::mat4(1.0f);
-            depth_imageArr[i] = NULL;
+            depth_imageArr[i] = nullptr;
             depth_imageArr[i] = (GLfloat *) realloc(depth_imageArr[i], sizeof (GLfloat) * iWidth * iHeight);
         }
-    }
-
-    void setupCameraAndWindow(Camera& camera, GLFWwindow* window) {
-        camera.Position = origin;
-        camera.Up = up;
-        camera.Front = front;
-        camera.Zoom = fov_degrees;
-        camera.Yaw = 0;
-        camera.Pitch = 0;
-        camera.WorldUp = up;
-        glfwSetWindowSize(window, iWidth, iHeight);
     }
 
     bool hasMoreImages() {
@@ -363,7 +366,7 @@ public:
     }
 
     glm::mat4 getProjectionMatrix() {
-        return MakeInfReversedZProjRH(glm::radians(camera.Zoom), (float) iWidth / (float) iHeight, zNear);
+        return MakeInfReversedZProjRH(glm::radians(fov_degrees), (float) iWidth / (float) iHeight, zNear);
     }
 
     void copyDepthBuffer() {
@@ -373,7 +376,7 @@ public:
     }
 
     void writeVolumeToOBJ() {
-        std::vector<glm::vec4> vertexCoordList;
+        std::vector<glm::vec3> vertexCoordList;
         std::vector<glm::vec3> vertexColorList;
         std::vector<glm::u32vec3> vertexCoordIndexList;
         std::vector<glm::u32vec3> vertexColorIndexList;
@@ -381,63 +384,80 @@ public:
         vertexColorList.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
 
         glm::mat4 projection_inv = glm::inverse(getProjectionMatrix());
+        std::cout << "projection_inv = " << glm::to_string(projection_inv) << std::endl;
+        glm::mat4 view_inv;
         //FILE *f = fopen("ptcloud.data", "w");
         //float z_at_max_r;
-        glm::f32vec4 pos;
+        glm::vec4 pos_scr;
+        glm::vec4 pos_3d;
         int i, j;
         unsigned int k, cur;
-        for (i = 0; i < iHeight; i++) {
-            for (k = 0; k < numImages; k++) {
-                glm::mat4 view_inv = glm::inverse(getView(k));
+        for (k = 0; k < numImages; k++) {
+            view_inv = glm::inverse(getView(k));
+            std::cout << "view_inv = " << glm::to_string(view_inv) << std::endl;
+            std::cout << "determinant = " << glm::determinant(view_inv) << std::endl;
+            for (i = 0; i < iHeight; i++) {
                 for (j = 0; j < iWidth; j++) {
-                    cur = ((iHeight - i - 1) * iWidth + j);
-                    pos.x = (float) 2.0f * j / iWidth - 1.0f;
-                    pos.y = (float) 2.0f * i / iHeight - 1.0f;
+                    cur = i * iWidth + j;
+                    //cur = ((iHeight - i - 1) * iWidth + j);
+                    //cur = ((iHeight - i - 1) * iWidth + j);
+                    pos_scr.x = (float) 2.0f * j / iWidth - 1.0f;
+                    pos_scr.y = (float) 2.0f * i / iHeight - 1.0f;
                     //pos.z = pixels[cur] * 2.0f - 1.0f;
-                    pos.z = depth_imageArr[k][cur];
+                    pos_scr.z = depth_imageArr[k][cur];
+                    pos_scr.w = 1.0f;
                     //if (std::abs(pos.z) < 1.0e-6f) { // max Z is 1/1.0e-7f
                     //    pos.z = (pos.z > 0) ? 1.0e-6f : -1.0e-6f;
                     //}
                     //if (std::sqrt(pos.x * pos.x + pos.y * pos.y + (1/pos.z)*(1/pos.z)) > MAX_RANGE) {
                     //if (std::abs(pos.z) < 1.0e-6f) { // max Z is 1/1.0e-7f
-                    if (std::abs(pos.z) < 1.0e-7 || std::isinf(pos.z) || std::abs(pos.z) < 2.0f / (radius_max * radius_max)) { // max Z is 1/1.0e-7f
+                    if (pos_scr.z < 0.0001) { // max Z is 1/1.0e-7f
+                        //std::cout << "z = " << pos.z << " < zNear = " << zNear << std::endl;
+                        //pos.z *= zNear / pos.z;
+                        //pos.z = 0.001*zNear;
+                        //pos_scr.z = 0.0001;
+                    }
+                    if (std::abs(pos_scr.z) < 2.0f / (radius_max * radius_max)) { // max Z is 1/1.0e-7f
                         //z_at_max_r = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (MAX_RANGE * MAX_RANGE);
                         //pos.z = z_at_max_r;
-                        pos.z = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (radius_max * radius_max);
+                        pos_scr.z = 2.0f * sqrt(pos_scr.x * pos_scr.x + pos_scr.y * pos_scr.y + 1) / (radius_max * radius_max);
                     }
-                    pos.w = 1.0f;
 
-                    glm::f32vec4 pos3d = view_inv * projection_inv * pos;
+                    pos_3d = view_inv * projection_inv * pos_scr;
 
-                    /// reconstruct the radius of the point (x,y,z) --> (r, theta, phi)
-                    // compare on r and if greater set r = r0
-                    // what is height? --> if H = Y-axis value, coordinate system point
-                    // p=(x,y,z) height = HeightAxis,p
-                    pos3d.x /= pos3d.w;
-                    pos3d.y /= -pos3d.w;
-                    pos3d.z /= pos3d.w;
-                    //pos3d.x -= 0*camera.Position.x;
-                    pos3d.y += 2 * camera.Position.y;
-                    //pos3d.z -= camera.Position.z;
-                    glm::vec3 euclidean_coords(pos3d.x, pos3d.y, pos3d.z);
+                    pos_3d.x /= pos_3d.w;
+                    pos_3d.y /= pos_3d.w;
+                    pos_3d.z /= pos_3d.w;
+
+                    glm::vec3 euclidean_coords(pos_3d.x, pos_3d.y, pos_3d.z);
+
+                    // clamp height to the interval [up_min, up_max]
+                    float height = glm::dot(euclidean_coords - origin, up);
+                    if (height > up_max) {
+                        euclidean_coords = euclidean_coords - (height - up_max) * up;
+                    } else if (height < up_min) {
+                        euclidean_coords = euclidean_coords + (up_min - height) * up;
+                    }
+
+                    // restrict radius to radius_max
                     glm::vec3 spherical_coords = EuclideanToSpherical(euclidean_coords);
                     if (spherical_coords.x > radius_max) {
                         spherical_coords.x = radius_max;
-                        euclidean_coords = SphericalToEuclidean(spherical_coords);
+                        //euclidean_coords = SphericalToEuclidean(spherical_coords);
+                        //std::cout << "radius_max exceeded: point = " << glm::to_string(pos3d) << " ==> new point = " << glm::to_string(euclidean_coords) << std::endl;
                     }
 
-                    if (i % 100 == 0 && j % 100 == 0) {
+                    if (i % 100 == 0 && j % 100 == 0 && DEBUG) {
                         //printf("%f %f %f\n", pos.x, pos.y, pos.z);
                         printf("%f %f %f\n", euclidean_coords.x, euclidean_coords.y, euclidean_coords.z);
                     }
-                    //fprintf(f, "%f %f %f\n", pos3d.x, pos3d.y, pos3d.z);
 
-                    vertexCoordList.push_back(pos3d);
+                    vertexCoordList.push_back(euclidean_coords);
                     if (i > 0 && j > 0) {
-                        int offsetA = (i - 1) * iWidth * numImages + j + k * iWidth;
-                        int offsetB = i * iWidth * numImages + j + k * iWidth;
-                        vertexCoordIndexList.push_back(glm::u32vec3(offsetA, offsetA + 1, offsetB));
-                        vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetA + 1, offsetB + 1));
+                        int offsetA = iWidth * iHeight * k + (i - 1) * iWidth + j;
+                        int offsetB = iWidth * iHeight * k + i * iWidth + j;
+                        vertexCoordIndexList.push_back(glm::u32vec3(offsetA + 1, offsetA, offsetB));
+                        vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetB + 1, offsetA + 1));
                         vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
                     }
                 }
@@ -446,7 +466,7 @@ public:
         //fclose(f);
 
         FILE *fobj = fopen(output_filename.c_str(), "w");
-        for (glm::vec4 vertex : vertexCoordList) {
+        for (glm::vec3 vertex : vertexCoordList) {
             fprintf(fobj, "v %f %f %f\n", vertex.x, vertex.y, vertex.z);
         }
         for (glm::u32vec3 face : vertexCoordIndexList) {
@@ -457,12 +477,15 @@ public:
 private:
 
     glm::mat4 getView(int viewIndex) {
-        glm::mat4 rotateMat4 = glm::rotate(glm::mat4(1.0f), camera_thetas[viewIndex], up);
-        glm::vec4 rotatedFront4 = rotateMat4 * glm::vec4(front, 1.0f);
-        glm::vec3 rotatedFront3(rotatedFront4.x, rotatedFront4.y, rotatedFront4.z);
-        camera.Front = rotatedFront3;
-        return camera.GetViewMatrix();
-        //return glm::lookAt(origin, origin + rotatedFront3, up);
+        //if (camera_thetas[viewIndex] != 0) {
+        if (true) {
+            glm::mat4 rotateMat4 = glm::rotate(glm::mat4(1.0f), glm::radians(camera_thetas[viewIndex]), up);
+            glm::vec4 rotatedFront4 = rotateMat4 * glm::vec4(front, 1.0f);
+            glm::vec3 rotatedFront3 = glm::vec3(rotatedFront4.x, rotatedFront4.y, rotatedFront4.z);
+            return glm::lookAt(origin, origin + rotatedFront3, up);
+        } else {
+            return glm::lookAt(origin, origin + front, up);
+        }
     }
 };
 
@@ -541,7 +564,13 @@ int main(int argc, char **argv) {
 
     // configure global opengl state
     // -----------------------------
+    // Reversed-Z means that far depth values are represented 
+    // by smaller numbers. That means you need to switch your glDepthFunc 
+    // from GL_LESS to GL_GREATER
+    // https://dev.theomader.com/depth-precision/
+    // https://nlguillemot.wordpress.com/2016/12/07/reversed-z-in-opengl/
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_GREATER);
 
     // implement reversed-Z opengl depth buffer
     // Reversed-Z in OpenGL
@@ -617,48 +646,27 @@ int main(int argc, char **argv) {
     }
 
 
-    // build and compile shaders
+    // build and compile and configure shaders
     // -------------------------
     Shader shader("depth_testing_revZ.vs", "depth_testing_revZ.fs");
-    // shader configuration
-    // --------------------
     shader.use();
     shader.setInt("texture1", 0);
 
-    // https://dev.theomader.com/depth-precision/
-    // https://nlguillemot.wordpress.com/2016/12/07/reversed-z-in-opengl/
-
     // render loop
-
-    //int width, height;
-
-    //glfwGetWindowSize(window, &width, &height);
-
-    //float rotationAngle_per_image = 2.0f * glm::pi<float>() / numImages;
-
-    //camera.Position.x = target_x;
-    //camera.Position.y = target_y;
-    //camera.Position.z = target_z;
-    //camera.Zoom = glm::pi<float>() / 2.0f;
-    //camera.Up = glm::vec3(0.0f, 0.0f, 1.0f);
-    //camera.Front = glm::vec3(1.0f, 0.0f, 0.0f);
-    //camera.Yaw = 0;
-    //camera.Pitch = 0;
-    //camera.WorldUp = glm::vec3(0.0f, 0.0f, 1.0f);
-    //camera.Zoom = 90.0f;
-    //int imageIdx = 0;
-    //glm::vec3 frontVec = camera.Front;
-
     glm::mat4 view, projection;
 
+    // render
+    // ------
     unsigned int vvol_index = 0;
     VisibilityVolume *vvol_ptr = nullptr;
     if (visibility_vol_list.size() > 0) {
         // initialize the visibility volume pointer 
         vvol_ptr = &visibility_vol_list[vvol_index];
-        vvol_ptr->initializeDepthBuffers();
-        vvol_ptr->setupCameraAndWindow(camera, window);
+        vvol_ptr->initializeWindowAndDepthBuffers(window);
     }
+//    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+//    glClearDepth(0.0f);
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
@@ -666,19 +674,6 @@ int main(int argc, char **argv) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
-        // render
-        // ------
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClearDepth(0.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // Reversed-Z means that far depth values are represented 
-        // by smaller numbers. That means you need to switch your glDepthFunc 
-        // from GL_LESS to GL_GREATER
-        glDepthFunc(GL_GREATER);
-        //glEnable(GL_DEPTH_TEST);
-
-        shader.use();
 
         // input
         // -----
@@ -691,8 +686,7 @@ int main(int argc, char **argv) {
                 vvol_index++;
                 if (vvol_index < visibility_vol_list.size()) {
                     vvol_ptr = &visibility_vol_list[vvol_index];
-                    vvol_ptr->initializeDepthBuffers();
-                    vvol_ptr->setupCameraAndWindow(camera, window);
+                    vvol_ptr->initializeWindowAndDepthBuffers(window);
                 } else {
                     // finished processing visibility volume requests
                     vvol_ptr = nullptr;
@@ -707,9 +701,16 @@ int main(int argc, char **argv) {
             view = vvol_ptr->getNextCameraMatrix();
             projection = vvol_ptr->getProjectionMatrix();
         } else {
-            view = glm::mat4(1.0f);
+            view = camera.GetViewMatrix();
             projection = MakeInfReversedZProjRH(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, zNear);
         }
+
+        // render
+        // ------
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearDepth(0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         //glm::mat4 projection = glm::mat4(1.0f);
         //glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, zNear, zFar);
         //projection = MakeInfReversedZProjRH(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, zNear, zFar);
@@ -720,6 +721,7 @@ int main(int argc, char **argv) {
         shader.setFloat("near", zNear);
         shader.setFloat("far", zFar);
         shader.setMat4("view", view);
+        //std::cout << "view = " << glm::to_string(view) << std::endl;
         shader.setMat4("projection", projection);
 
         if (config_ptr != nullptr) {
@@ -755,22 +757,6 @@ int main(int argc, char **argv) {
             vvol_ptr->currentImageIndex++;
         }
     }
-
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-    //snprintf(filename, SCREENSHOT_MAX_FILENAME, "tmp.%d.png", nframes);
-    //screenshot_png("depth_screenshot.png", width, height);
-    //screenshot_float("depth_float_screenshot.png", width, height);
-
-    //glm::mat4 model = glm::mat4(1.0f);
-    //glm::mat4 view = camera.GetViewMatrix();
-    //glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, zNear, zFar);
-
-    //    GLfloat *pixels = NULL;
-    //    pixels = (GLfloat *) realloc(pixels, sizeof (GLfloat) * width * height);
-    //    glReadBuffer(GL_FRONT);
-    //    glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
-    //    free(pixels);
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
