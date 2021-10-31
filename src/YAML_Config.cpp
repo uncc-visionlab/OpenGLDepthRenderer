@@ -130,8 +130,8 @@ bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
             origin.z = nlocation[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: Visibility volume has no location." << std::endl;
-            return false;
+            std::cout << "Error: Visibility volume has no origin - Default (0,0,0) used." << std::endl;
+            //return false;
         }
         if (visibility["up"] && visibility["up"].size() == 3) {
             YAML::Node nup = visibility["up"];
@@ -140,8 +140,8 @@ bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
             up.z = nup[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: Visibility volume has no up vector." << std::endl;
-            return false;
+            std::cout << "Error: Visibility volume has no up vector - Default (0,1,0) used." << std::endl;
+            //return false;
         }
         if (visibility["front"] && visibility["front"].size() == 3) {
             YAML::Node nfront = visibility["front"];
@@ -150,29 +150,44 @@ bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
             front.z = nfront[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: Visibility volume has no front vector." << std::endl;
-            return false;
+            std::cout << "Error: Visibility volume has no front vector - Default (1,0,0) used." << std::endl;
+            //return false;
+        }
+        if (visibility["fov_degrees"]) {
+            fov_degrees = visibility["fov_degrees"].as<float>();
+        } else {
+            std::cout << "Error: Visibility volume has no field of view - Default (" << fov_degrees << ") used." << std::endl;
+            //return false;
+        }
+        if (visibility["up_max"]) {
+            up_max = visibility["up_max"].as<float>();
+        } else {
+            std::cout << "Error: Visibility volume has no max up (altitude) value - Default(" << up_max << ") used." << std::endl;
+            //return false;
+        }
+        if (visibility["up_min"]) {
+            up_min = visibility["up_min"].as<float>();
+        } else {
+            std::cout << "Error: Visibility volume has no min up (altitude) value - Default(" << up_min << ") used." << std::endl;
+            //return false;
+        }
+        if (visibility["radius_max"]) {
+            radius_max = visibility["radius_max"].as<float>();
+        } else {
+            std::cout << "Error: Visibility volume has no max radius value - Default(" << radius_max << ") used." << std::endl;
+            //return false;
+        }
+        if (visibility["output_file"]) {
+            output_filename = visibility["output_file"].as<std::string>();
+        } else {
+            std::cout << "Error: Visibility volume missing required output filename - Default(\"" << output_filename << "\") used." << std::endl;
+            //return false;
         }
     }
     return true;
 }
 
-//Camera::CameraPtr YAML_Camera::makeCamera() {
-//    Camera::CameraPtr camera_ptr;
-//    if (type.compare("orthographic") == 0) {
-//        camera_ptr = std::dynamic_pointer_cast<Camera>(std::make_shared<OrthographicCamera>());
-//        camera_ptr->setScaleXY(ortho_scalef.x, ortho_scalef.y);
-//    } else if (type.compare("pinhole") == 0) {
-//        camera_ptr = std::dynamic_pointer_cast<Camera>(std::make_shared<PinholeCamera>());
-//        camera_ptr->setFovXY(pinhole_fov.x, pinhole_fov.y);
-//    }
-//    camera_ptr->setViewPose(location, lookat);
-//    camera_ptr->setViewport(width, height);
-//    return camera_ptr;
-//}
-
 // YAML Geometry
-
 bool YAML_Object3D::parse(const YAML::Node& object3d) {
     if (object3d) {
         if (object3d["position"] && object3d["position"].size() == 3) {
@@ -217,9 +232,9 @@ glm::mat4 YAML_Object3D::getTransform() {
     glm::vec3 axis = glm::normalize(glm::vec3(orientation_axis_angle.x, orientation_axis_angle.y, orientation_axis_angle.z));
     glm::mat4 transform;
     if (orientation_axis_angle.w == 0 || std::abs(glm::length(axis) - 1.0f) > 1e-3f) {
-    transform = glm::mat4(1.0f);
+        transform = glm::mat4(1.0f);
     } else {
-            glm::rotate(transform, orientation_axis_angle.w * glm::pi<float>() / 180.0f, axis);
+        glm::rotate(transform, orientation_axis_angle.w * glm::pi<float>() / 180.0f, axis);
     }
     transform[0][3] = position.x;
     transform[1][3] = position.y;
@@ -234,13 +249,6 @@ glm::mat4 YAML_Object3D::getTransform() {
     }
     return transform;
 }
-
-//void YAML_Light::generateGeometry(std::vector<VertexAttributes>& attributes, std::vector<unsigned int>& indices) {
-//    if (name == "parallelogram") {
-//        Parallelogram::create(optix::make_float3(0.0f, 0.0f, 0.0f), scale.x * optix::make_float3(1.0f, 0.0f, 0.0f),
-//                scale.y * optix::make_float3(0.0f, 1.0f, 0.0f), optix::make_float3(0.0f, 0.0f, 1.0f), attributes, indices);
-//    }
-//}
 
 bool YAML_Mesh::parse(const YAML::Node & mesh) {
     if (mesh) {
@@ -262,46 +270,6 @@ bool YAML_Mesh::parse(const YAML::Node & mesh) {
             std::cout << "Error: mesh missing required mesh filename." << std::endl;
             return false;
         }
-        if (mesh["material"]) {
-            material = mesh["material"].as<std::string>();
-        } else {
-            std::cout << "Error: mesh missing required material assuming \"Default\" material." << std::endl;
-        }
     }
     return true;
 }
-//
-//std::vector<tinyobj::shape_t> YAML_Mesh::getShapes() {
-//    std::vector<tinyobj::shape_t> shapes;
-//    std::vector<tinyobj::material_t> materials;
-//    std::string meshFilename = std::string(sutil::samplesDir()) + "/data/" + filename;
-//    std::string err;
-//    optix::Geometry geom;
-//    if (LoadObj(shapes, // [output]
-//            materials, // [output]
-//            err, // [output]
-//            meshFilename.c_str())) {
-//    }
-//    return shapes;
-//}
-
-//Mesh YAML_Mesh::getMesh() {
-//    std::vector<tinyobj::shape_t> shapes;
-//    std::vector<tinyobj::material_t> materials;
-//    std::string meshFilename = std::string(sutil::samplesDir()) + "/data/" + filename;
-//
-//    Mesh mesh;
-//    MeshLoader meshLoader(meshFilename);
-//    meshLoader.scanMesh(mesh);
-//
-//    mesh.positions = new float[ 3 * mesh.num_vertices ];
-//    mesh.normals = mesh.has_normals ? new float[ 3 * mesh.num_vertices ] : 0;
-//    mesh.texcoords = mesh.has_texcoords ? new float[ 2 * mesh.num_vertices ] : 0;
-//    mesh.tri_indices = new int32_t[ 3 * mesh.num_triangles ];
-//    mesh.mat_indices = new int32_t[ 1 * mesh.num_triangles ];
-//
-//    mesh.mat_params = new MaterialParams[ mesh.num_materials ];
-//
-//    meshLoader.loadMesh(mesh);
-//    return mesh;
-//}

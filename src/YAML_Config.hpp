@@ -55,22 +55,22 @@ public:
 
 class YAML_VisibilityVolume : public YAML_Object {
 public:
-
-    YAML_VisibilityVolume() : width(0), height(0), up(0.0f, 1.0f, 0.0f), front(1.0f, 0.0f, 0.0f) {
-        max_altitude = std::numeric_limits<float>::max();
-        min_altitude = std::numeric_limits<float>::min();
-    }
-    bool parse(const YAML::Node& camera);
-    //Camera::CameraPtr makeCamera();
-
-    int width;
-    int height;
-    glm::vec3 origin;
-    glm::vec3 up;
-    glm::vec3 front;
+    int width, height;
     float fov_degrees;
-    float max_altitude;
-    float min_altitude;
+    glm::vec3 origin, up, front;
+    float up_max, up_min, radius_max;
+    std::string output_filename;
+
+    YAML_VisibilityVolume() : width(0), height(0), 
+            fov_degrees(90.0f), origin(0.0f, 0.0f, 0.0f),
+            up(0.0f, 1.0f, 0.0f), front(1.0f, 0.0f, 0.0f),
+            output_filename("output.obj") {
+        up_max = std::numeric_limits<float>::max();
+        radius_max = std::numeric_limits<float>::max();        
+        up_min = -std::numeric_limits<float>::max();
+    }
+    
+    bool parse(const YAML::Node& camera);
 };
 
 class YAML_Object3D : public YAML_Object {
@@ -92,7 +92,8 @@ public:
 class YAML_Mesh : public YAML_Object3D {
 public:
 
-    YAML_Mesh() : material("Default") {
+    //YAML_Mesh() : material("Default") {
+    YAML_Mesh() {
     }
     bool parse(const YAML::Node& mesh);
     //    std::vector<tinyobj::shape_t> getShapes();
@@ -100,7 +101,7 @@ public:
 
     std::string format;
     std::string filename;
-    std::string material;
+    //std::string material;
     std::string geometry_type;
 };
 
