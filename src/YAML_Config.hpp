@@ -43,11 +43,10 @@ public:
 class YAML_CoordinateSystem : public YAML_Object {
 public:
 
-    YAML_CoordinateSystem() : origin(0.0f), up(0.0f, 1.0f, 0.0f), front(1.0f, 0.0f, 0.0f) {
+    YAML_CoordinateSystem() : origin(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), front(1.0f, 0.0f, 0.0f) {
     }
     bool parse(const YAML::Node& camera);
-    //Camera::CameraPtr makeCamera();
-
+    glm::mat4 getTransform();
     glm::vec3 origin;
     glm::vec3 up;
     glm::vec3 front;

@@ -85,8 +85,8 @@ bool YAML_CoordinateSystem::parse(const YAML::Node& camera) {
             origin.z = nlocation[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: Coordinate system has no origin." << std::endl;
-            return false;
+            std::cout << "Error: Coordinate system has no origin  - Default " << glm::to_string(origin) << " used." << std::endl;
+            //return false;
         }
         if (camera["up"] && camera["up"].size() == 3) {
             YAML::Node nlookat = camera["up"];
@@ -95,8 +95,8 @@ bool YAML_CoordinateSystem::parse(const YAML::Node& camera) {
             up.z = nlookat[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: camera has no up vector." << std::endl;
-            return false;
+            std::cout << "Error: camera has no up vector - Default " << glm::to_string(up) << " used." << std::endl;
+            //return false;
         }
         if (camera["front"] && camera["front"].size() == 3) {
             YAML::Node nlookat = camera["front"];
@@ -105,11 +105,21 @@ bool YAML_CoordinateSystem::parse(const YAML::Node& camera) {
             front.z = nlookat[2].as<float>();
             //std::cout << "location = (" << camera_yaml.location.x << ", " << camera_yaml.location.y << ", " << camera_yaml.location.z << ")" << std::endl;
         } else {
-            std::cout << "Error: camera has no front vector." << std::endl;
-            return false;
+            std::cout << "Error: camera has no front vector - Default " << glm::to_string(front) << " used." << std::endl;
+            //return false;
         }
     }
     return true;
+}
+
+glm::mat4 YAML_CoordinateSystem::getTransform() {
+    glm::vec3 nfront = glm::normalize(front);
+    glm::vec3 nup = glm::normalize(up);
+    glm::vec3 nother = glm::cross(nfront, nup);
+    return glm::mat4(nfront.x, nfront.y, nfront.z, -origin.x,
+            nup.x, nup.y, nup.z, -origin.y,
+            nother.x, nother.y, nother.z, -origin.z,
+            0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 bool YAML_VisibilityVolume::parse(const YAML::Node& visibility) {
