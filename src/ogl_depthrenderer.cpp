@@ -36,7 +36,8 @@ unsigned int loadTexture(const char *path);
 // settings
 unsigned int SCR_WIDTH = 300;
 unsigned int SCR_HEIGHT = 300;
-float zNear = 1.0e-0f;
+float MAX_DEPTH = 1e4;
+float zNear = 1.0e-2f;
 float zFar = 10.0f;
 
 // camera
@@ -130,18 +131,18 @@ inline glm::mat4 inversePerspectiveTransform(float fovY_radians, float aspectRat
 
 glm::vec3 EuclideanToSpherical(const glm::vec3& euclid) {
     float r = std::sqrt(euclid.x * euclid.x + euclid.y * euclid.y + euclid.z * euclid.z);
-    float psi = std::atan2(euclid.y, euclid.x);
-    float theta = std::acos(euclid.z / r);
+    float theta = std::acos(euclid.y / r);
+    float psi = std::atan2(euclid.z, euclid.x);
     return glm::vec3(r, theta, psi);
 }
 
 glm::vec3 SphericalToEuclidean(const glm::vec3& spherical) {
     const float& r = spherical.x;
-    const float& psi = spherical.y;
-    const float& theta = spherical.z;
+    const float& theta = spherical.y;
+    const float& psi = spherical.z;
     float x = r * std::cos(psi) * std::sin(theta);
-    float y = r * std::sin(psi) * std::sin(theta);
-    float z = r * std::cos(theta);
+    float z = r * std::sin(psi) * std::sin(theta);
+    float y = r * std::cos(theta);
     return glm::vec3(x, y, z);
 }
 
@@ -306,6 +307,7 @@ public:
     unsigned int numImages;
     unsigned int currentImageIndex;
     float *camera_thetas = nullptr;
+    float *camera_phis = nullptr;
     GLfloat ** depth_imageArr = nullptr;
 
     VisibilityVolume() : iWidth(100), iHeight(100), fov_degrees(90),
@@ -333,16 +335,17 @@ public:
         // these calls are required per https://github.com/glfw/glfw/issues/1661
         glfwPollEvents();
         glfwWaitEvents();
-        
+
         // initialize the depth buffers
-        numImages = 4;
+        numImages = 6;
         currentImageIndex = 0;
         camera_thetas = (float *) realloc(camera_thetas, sizeof (float) * numImages);
-        //float camera_phi[] = {0.0, 0.0f, 0.0f, 0.0f, 90.0f, -90.0f};
-        //float thetas[] = {0.0, 90.0f, 180.0f, 270.0f, 0.0f, 0.0f};
+        camera_phis = (float *) realloc(camera_phis, sizeof (float) * numImages);
+        float phis[] = {0.0, 0.0f, 0.0f, 0.0f, 90.0f, -90.0f};
         float thetas[] = {0.0, 90.0f, 180.0f, 270.0f, 0.0f, 0.0f};
         for (unsigned int i = 0; i < numImages; i++) {
             camera_thetas[i] = thetas[i];
+            camera_phis[i] = phis[i];
         }
         //glm::mat4 views[numImages];
         depth_imageArr = (GLfloat **) realloc(depth_imageArr, sizeof (GLfloat*) * numImages);
@@ -375,7 +378,7 @@ public:
         glReadPixels(0, 0, iWidth, iHeight, GL_DEPTH_COMPONENT, GL_FLOAT, depth_imageArr[currentImageIndex]);
     }
 
-    void writeVolumeToOBJ() {
+    void writeVolumeToOBJ(YAML_CoordinateSystem world_coord_sys) {
         std::vector<glm::vec3> vertexCoordList;
         std::vector<glm::vec3> vertexColorList;
         std::vector<glm::u32vec3> vertexCoordIndexList;
@@ -384,7 +387,9 @@ public:
         vertexColorList.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
 
         glm::mat4 projection_inv = glm::inverse(getProjectionMatrix());
-        std::cout << "projection_inv = " << glm::to_string(projection_inv) << std::endl;
+        if (DEBUG) {
+            std::cout << "projection_inv = " << glm::to_string(projection_inv) << std::endl;
+        }
         glm::mat4 view_inv;
         //FILE *f = fopen("ptcloud.data", "w");
         //float z_at_max_r;
@@ -394,8 +399,10 @@ public:
         unsigned int k, cur;
         for (k = 0; k < numImages; k++) {
             view_inv = glm::inverse(getView(k));
-            std::cout << "view_inv = " << glm::to_string(view_inv) << std::endl;
-            std::cout << "determinant = " << glm::determinant(view_inv) << std::endl;
+            if (DEBUG) {
+                std::cout << "view_inv = " << glm::to_string(view_inv) << std::endl;
+                std::cout << "determinant = " << glm::determinant(view_inv) << std::endl;
+            }
             for (i = 0; i < iHeight; i++) {
                 for (j = 0; j < iWidth; j++) {
                     cur = i * iWidth + j;
@@ -406,21 +413,25 @@ public:
                     //pos.z = pixels[cur] * 2.0f - 1.0f;
                     pos_scr.z = depth_imageArr[k][cur];
                     pos_scr.w = 1.0f;
+                    if (k == 4) {
+                        //std::cout << "z = " << depth_imageArr[k][cur] << std::endl;
+                    }
+
                     //if (std::abs(pos.z) < 1.0e-6f) { // max Z is 1/1.0e-7f
                     //    pos.z = (pos.z > 0) ? 1.0e-6f : -1.0e-6f;
                     //}
                     //if (std::sqrt(pos.x * pos.x + pos.y * pos.y + (1/pos.z)*(1/pos.z)) > MAX_RANGE) {
                     //if (std::abs(pos.z) < 1.0e-6f) { // max Z is 1/1.0e-7f
-                    if (pos_scr.z < 0.0001) { // max Z is 1/1.0e-7f
+                    if (pos_scr.z < zNear / MAX_DEPTH) { // max Z is 1/1.0e-7f
                         //std::cout << "z = " << pos.z << " < zNear = " << zNear << std::endl;
                         //pos.z *= zNear / pos.z;
                         //pos.z = 0.001*zNear;
-                        //pos_scr.z = 0.0001;
+                        pos_scr.z = zNear / MAX_DEPTH;
                     }
                     if (std::abs(pos_scr.z) < 2.0f / (radius_max * radius_max)) { // max Z is 1/1.0e-7f
                         //z_at_max_r = 2.0f * sqrt(pos.x * pos.x + pos.y * pos.y + 1) / (MAX_RANGE * MAX_RANGE);
                         //pos.z = z_at_max_r;
-                        pos_scr.z = 2.0f * sqrt(pos_scr.x * pos_scr.x + pos_scr.y * pos_scr.y + 1) / (radius_max * radius_max);
+                        //pos_scr.z = 2.0f * sqrt(pos_scr.x * pos_scr.x + pos_scr.y * pos_scr.y + 1) / (radius_max * radius_max);
                     }
 
                     pos_3d = view_inv * projection_inv * pos_scr;
@@ -428,23 +439,29 @@ public:
                     pos_3d.x /= pos_3d.w;
                     pos_3d.y /= pos_3d.w;
                     pos_3d.z /= pos_3d.w;
+                    pos_3d.w = 1.0f;
 
                     glm::vec3 euclidean_coords(pos_3d.x, pos_3d.y, pos_3d.z);
 
+                    // restrict radius to radius_max
+                    glm::mat4 world_coordinate_sys = world_coord_sys.getTransform();
+                    //std::cout << "world_coords_xform = " << glm::to_string(world_coordinate_sys) << std::endl;
+                    glm::vec4 world_coord4 = world_coordinate_sys * glm::vec4(euclidean_coords, 1.0f);
+                    glm::vec3 world_coord3 = glm::vec3(world_coord4.x, world_coord4.y, world_coord4.z);
+                    glm::vec3 spherical_coords = EuclideanToSpherical(world_coord3);
+                    if (spherical_coords.x > radius_max) {
+                        spherical_coords.x = radius_max;
+                        glm::vec3 euclidean_coords_new = SphericalToEuclidean(spherical_coords);
+                        euclidean_coords = euclidean_coords_new;
+                        //std::cout << "radius_max exceeded: point = " << glm::to_string(euclidean_coords) << " ==> new point = " << glm::to_string(euclidean_coords_new) << std::endl;
+                    }
+
                     // clamp height to the interval [up_min, up_max]
-                    float height = glm::dot(euclidean_coords - origin, up);
+                    float height = glm::dot(euclidean_coords - world_coord_sys.origin, world_coord_sys.up);
                     if (height > up_max) {
                         euclidean_coords = euclidean_coords - (height - up_max) * up;
                     } else if (height < up_min) {
                         euclidean_coords = euclidean_coords + (up_min - height) * up;
-                    }
-
-                    // restrict radius to radius_max
-                    glm::vec3 spherical_coords = EuclideanToSpherical(euclidean_coords);
-                    if (spherical_coords.x > radius_max) {
-                        spherical_coords.x = radius_max;
-                        //euclidean_coords = SphericalToEuclidean(spherical_coords);
-                        //std::cout << "radius_max exceeded: point = " << glm::to_string(pos3d) << " ==> new point = " << glm::to_string(euclidean_coords) << std::endl;
                     }
 
                     if (i % 100 == 0 && j % 100 == 0 && DEBUG) {
@@ -477,12 +494,17 @@ public:
 private:
 
     glm::mat4 getView(int viewIndex) {
-        //if (camera_thetas[viewIndex] != 0) {
-        if (true) {
-            glm::mat4 rotateMat4 = glm::rotate(glm::mat4(1.0f), glm::radians(camera_thetas[viewIndex]), up);
-            glm::vec4 rotatedFront4 = rotateMat4 * glm::vec4(front, 1.0f);
+        if (camera_thetas[viewIndex] != 0 || camera_phis[viewIndex] != 0) {
+        //if (true) {
+            glm::vec4 other = glm::vec4(glm::cross(front, up), 1.0f);
+            glm::mat4 rotateAzimuth = glm::rotate(glm::mat4(1.0f), glm::radians(camera_thetas[viewIndex]), up);
+            glm::vec4 new_other = rotateAzimuth * other;
+            glm::mat4 rotateToPhiTheta = glm::rotate(rotateAzimuth, glm::radians(camera_phis[viewIndex]), glm::vec3(new_other.x, new_other.y, new_other.z));
+            glm::vec4 rotatedFront4 = rotateToPhiTheta * glm::vec4(front, 1.0f);
+            glm::vec4 rotatedUp4 = rotateToPhiTheta * glm::vec4(up, 1.0f);
             glm::vec3 rotatedFront3 = glm::vec3(rotatedFront4.x, rotatedFront4.y, rotatedFront4.z);
-            return glm::lookAt(origin, origin + rotatedFront3, up);
+            glm::vec3 rotatedUp3 = glm::vec3(rotatedUp4.x, rotatedUp4.y, rotatedUp4.z);
+            return glm::lookAt(origin, origin + rotatedFront3, rotatedUp3);
         } else {
             return glm::lookAt(origin, origin + front, up);
         }
@@ -521,12 +543,19 @@ int main(int argc, char **argv) {
     bool USE_BUILTIN_SCENE = false;
 
     YAML_Config::YAML_ConfigPtr config_ptr;
+    YAML_CoordinateSystem world_coord_sys;
     std::string configfile;
     if (result.count("config")) {
         configfile = result["config"].as<std::string>();
         config_ptr = std::make_shared<YAML_Config>();
         if (!config_ptr->parse(configfile)) {
             config_ptr = nullptr;
+        }
+        if (config_ptr != nullptr && config_ptr->coordsystems.size() > 0) {
+            world_coord_sys = config_ptr->coordsystems[0];
+            if (config_ptr->coordsystems.size() > 1) {
+                std::cout << "Using first instance of world_coord_sys as the world coordinate system specification." << std::endl;
+            }
         }
     }
     // glfw: initialize and configure
@@ -664,9 +693,9 @@ int main(int argc, char **argv) {
         vvol_ptr = &visibility_vol_list[vvol_index];
         vvol_ptr->initializeWindowAndDepthBuffers(window);
     }
-//    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-//    glClearDepth(0.0f);
-//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    //    glClearDepth(0.0f);
+    //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
@@ -681,7 +710,7 @@ int main(int argc, char **argv) {
             // pointer has been initialized, test it to see if we need to increment the pointer and setup a new calculation
             if (!vvol_ptr->hasMoreImages()) {
                 // write the calculated volume boundary surface as an OBJ file
-                vvol_ptr->writeVolumeToOBJ();
+                vvol_ptr->writeVolumeToOBJ(world_coord_sys);
                 // go to the next visibility volume calculation 
                 vvol_index++;
                 if (vvol_index < visibility_vol_list.size()) {
