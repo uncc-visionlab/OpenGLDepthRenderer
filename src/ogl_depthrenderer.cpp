@@ -36,7 +36,7 @@ unsigned int loadTexture(const char *path);
 // settings
 unsigned int SCR_WIDTH = 300;
 unsigned int SCR_HEIGHT = 300;
-float MAX_DEPTH = 1e4;
+float MAX_DEPTH = 1e5;
 float zNear = 1.0e-2f;
 float zFar = 10.0f;
 
@@ -312,7 +312,7 @@ public:
 
     VisibilityVolume() : iWidth(100), iHeight(100), fov_degrees(90),
     origin(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), front(1.0f, 0.0f, 0.0f),
-    output_filename("output.obj") {
+    output_filename("output.obj"), numImages(6), currentImageIndex(0) {
         up_max = std::numeric_limits<float>::max();
         radius_max = std::numeric_limits<float>::max();
         up_min = -std::numeric_limits<float>::max();
@@ -330,7 +330,12 @@ public:
     }
 
     void initializeWindowAndDepthBuffers(GLFWwindow* window) {
-        // resize window and allow calls to resize framebuffer        
+        // resize window and allow calls to resize framebuffer  
+        if (iWidth != iHeight) {
+            std::cout << "Visibility Volume Width and Height parameters must be equal." << std::endl;
+            std::cout << "Forcing Width = Height = " << iHeight << "." << std::endl;
+            iWidth = iHeight;
+        }
         glfwSetWindowSize(window, iWidth, iHeight);
         // these calls are required per https://github.com/glfw/glfw/issues/1661
         glfwPollEvents();
@@ -378,6 +383,8 @@ public:
         glReadPixels(0, 0, iWidth, iHeight, GL_DEPTH_COMPONENT, GL_FLOAT, depth_imageArr[currentImageIndex]);
     }
 
+#define toOBJIndex(i, j, k) (((iHeight * k + i) * iWidth) + j + 1)
+
     void writeVolumeToOBJ(YAML_CoordinateSystem world_coord_sys) {
         std::vector<glm::vec3> vertexCoordList;
         std::vector<glm::vec3> vertexColorList;
@@ -408,8 +415,8 @@ public:
                     cur = i * iWidth + j;
                     //cur = ((iHeight - i - 1) * iWidth + j);
                     //cur = ((iHeight - i - 1) * iWidth + j);
-                    pos_scr.x = (float) 2.0f * j / iWidth - 1.0f;
-                    pos_scr.y = (float) 2.0f * i / iHeight - 1.0f;
+                    pos_scr.x = (float) 2.0f * (j + 0.5f) / iWidth - 1.0f;
+                    pos_scr.y = (float) 2.0f * (i + 0.5f) / iHeight - 1.0f;
                     //pos.z = pixels[cur] * 2.0f - 1.0f;
                     pos_scr.z = depth_imageArr[k][cur];
                     pos_scr.w = 1.0f;
@@ -448,11 +455,13 @@ public:
                     //std::cout << "world_coords_xform = " << glm::to_string(world_coordinate_sys) << std::endl;
                     glm::vec4 world_coord4 = world_coordinate_sys * glm::vec4(euclidean_coords, 1.0f);
                     glm::vec3 world_coord3 = glm::vec3(world_coord4.x, world_coord4.y, world_coord4.z);
-                    glm::vec3 spherical_coords = EuclideanToSpherical(world_coord3);
+                    //glm::vec3 spherical_coords = EuclideanToSpherical(world_coord3);
+                    glm::vec3 spherical_coords = EuclideanToSpherical(world_coord3 - origin);
                     if (spherical_coords.x > radius_max) {
                         spherical_coords.x = radius_max;
                         glm::vec3 euclidean_coords_new = SphericalToEuclidean(spherical_coords);
-                        euclidean_coords = euclidean_coords_new;
+                        //euclidean_coords = euclidean_coords_new;
+                        euclidean_coords = euclidean_coords_new + origin;
                         //std::cout << "radius_max exceeded: point = " << glm::to_string(euclidean_coords) << " ==> new point = " << glm::to_string(euclidean_coords_new) << std::endl;
                     }
 
@@ -476,10 +485,225 @@ public:
                         vertexCoordIndexList.push_back(glm::u32vec3(offsetA + 1, offsetA, offsetB));
                         vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetB + 1, offsetA + 1));
                         vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+                        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
                     }
                 }
             }
         }
+        // TODO: stitch 4 cylindrical seams of surfaces 
+        // join the columns of image 0-3 with columns of image 1-4 respectively (where image 4 = image 0 closes the shape)
+        int i_left, i_right, j_left, j_right, k_left, k_right;
+        for (k = 0; k < 4; k++) {
+            for (i = 1; i < iHeight; i++) {
+                k_left = (k + 1) % 4;
+                k_right = k;
+                j_left = iWidth;
+                j_right = 0 + 1;
+                int offsetA = iWidth * iHeight * k_left + (i - 1) * iWidth + j_left;
+                int offsetA_plus1 = iWidth * iHeight * k_right + (i - 1) * iWidth + j_right;
+                int offsetB = iWidth * iHeight * k_left + i * iWidth + j_left;
+                int offsetB_plus1 = iWidth * iHeight * k_right + i * iWidth + j_right;
+                vertexCoordIndexList.push_back(glm::u32vec3(offsetA_plus1, offsetA, offsetB));
+                vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetB_plus1, offsetA_plus1));
+                vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+                vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            }
+        }
+        // stitch bottom seams for the image with index k = 5
+        k = 5;
+        // join the columns of the top row of image 0 with columns of the bottom row of image 5
+        for (j = 1; j < iWidth; j++) {
+            k_left = 0;
+            i_left = 0;
+            j_left = j;
+            k_right = k;
+            i_right = iHeight - 1;
+            j_right = j;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left + 1;
+            int offsetB = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + i_right * iWidth + j_right + 1;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA, offsetA_plus1, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB_plus1, offsetB, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // join the columns of the top row of image 2 with the columns of the top row of image 5
+        for (j = 1; j < iWidth; j++) {
+            k_left = 2;
+            i_left = 0;
+            j_left = iWidth + 1 - j;
+            k_right = k;
+            i_right = 0;
+            j_right = j;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left - 1;
+            int offsetB = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + i_right * iWidth + j_right + 1;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA_plus1, offsetA, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetB_plus1, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // join the columns of the top row of image 3 with the rows of the last column of image 5
+        for (i = 1; i < iHeight; i++) {
+            k_left = 3;
+            i_left = 0;
+            j_left = i;
+            k_right = k;
+            i_right = iHeight - i;
+            j_right = iWidth;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left + 1;
+            int offsetB = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + (i_right - 1) * iWidth + j_right;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA, offsetA_plus1, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB_plus1, offsetB, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // join the columns of the top row of image 1 with the rows of the first column of image 5        
+        for (i = 1; i < iHeight; i++) {
+            k_left = 1;
+            i_left = 0;
+            j_left = i;
+            k_right = k;
+            i_right = i;
+            j_right = 1;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left + 1;
+            int offsetB = iWidth * iHeight * k_right + (i_right - 1) * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA, offsetA_plus1, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB_plus1, offsetB, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // insert 4 corner triangles that stitch 3 image corners together
+        // k = 0, i = 0, j = 0
+        // k = 5, i = iHeight - 1, j = 0
+        // k = 1, i = 0, j = iWidth - 1
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(0, 0, 0),
+                toOBJIndex(iHeight - 1, 0, 5),
+                toOBJIndex(0, iWidth - 1, 1)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        // k = 1, i = 0, j = 0
+        // k = 5, i = 0, j = 0
+        // k = 2, i = 0, j = iWidth - 1
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(0, 0, 1),
+                toOBJIndex(0, 0, 5),
+                toOBJIndex(0, iWidth - 1, 2)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        // k = 2, i = 0, j = 0
+        // k = 5, i = 0, j = iWidth - 1
+        // k = 3, i = 0, j = iWidth - 1
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(0, 0, 2),
+                toOBJIndex(0, iWidth - 1, 5),
+                toOBJIndex(0, iWidth - 1, 3)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        // k = 3, i = 0, j = 0
+        // k = 5, i = iHeight - 1, j = iWidth - 1
+        // k = 0, i = 0, j = iWidth - 1
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(0, 0, 3),
+                toOBJIndex(iHeight - 1, iWidth - 1, 5),
+                toOBJIndex(0, iWidth - 1, 0)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+
+        // stitch top seams for the image with index k = 4
+        k = 4;
+        // join the columns of the bottom row of image 0 with columns of the top row of image 4
+        for (j = 1; j < iWidth; j++) {
+            k_left = 0;
+            i_left = iHeight - 1;
+            j_left = j;
+            k_right = k;
+            i_right = 0;
+            j_right = j;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left + 1;
+            int offsetB = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + i_right * iWidth + j_right + 1;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA_plus1, offsetA, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetB_plus1, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // join the columns of the bottom row of image 2 with the columns of the bottom row of image 4
+        for (j = 1; j < iWidth; j++) {
+            k_left = 2;
+            i_left = iHeight - 1;
+            j_left = iWidth + 1 - j;
+            k_right = k;
+            i_right = iHeight - 1;
+            j_right = j;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left - 1;
+            int offsetB = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + i_right * iWidth + j_right + 1;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA, offsetA_plus1, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB_plus1, offsetB, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // join the columns of the bottom row of image 3 with the rows of the last column of image 4
+        for (i = 1; i < iHeight; i++) {
+            k_left = 3;
+            i_left = iHeight - 1;
+            j_left = i;
+            k_right = k;
+            i_right = i;
+            j_right = iWidth;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left + 1;
+            int offsetB = iWidth * iHeight * k_right + (i_right - 1) * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA_plus1, offsetA, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetB_plus1, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // join the columns of the bottom row of image 1 with the rows of the first column of image 4        
+        for (i = 1; i < iHeight; i++) {
+            k_left = 1;
+            i_left = iHeight - 1;
+            j_left = i;
+            k_right = k;
+            i_right = iHeight - i;
+            j_right = 1;
+            int offsetA = iWidth * iHeight * k_left + i_left * iWidth + j_left;
+            int offsetA_plus1 = iWidth * iHeight * k_left + i_left * iWidth + j_left + 1;
+            int offsetB = iWidth * iHeight * k_right + i_right * iWidth + j_right;
+            int offsetB_plus1 = iWidth * iHeight * k_right + (i_right - 1) * iWidth + j_right;
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetA_plus1, offsetA, offsetB));
+            vertexCoordIndexList.push_back(glm::u32vec3(offsetB, offsetB_plus1, offsetA_plus1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+            vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        }
+        // insert 4 corner triangles that stitch 3 image corners together
+        // k = 0, i = iHeight - 1, j = 0
+        // k = 1, i = iHeight - 1, j = iWidth - 1
+        // k = 4, i = 0, j = 0
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(iHeight - 1, 0, 0),
+                toOBJIndex(iHeight - 1, iWidth - 1, 1), toOBJIndex(0, 0, 4)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        // k = 1, i = iHeight - 1, j = 0
+        // k = 2, i = iHeight - 1, j = iWidth - 1
+        // k = 4, i = 0, j = 0
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(iHeight - 1, 0, 1),
+                toOBJIndex(iHeight - 1, iWidth - 1, 2), toOBJIndex(iHeight - 1, 0, 4)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        // k = 2, i = iHeight - 1, j = 0
+        // k = 3, i = iHeight - 1, j = iWidth - 1
+        // k = 4, i = iHeight - 1, j = iWidth - 1
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(iHeight - 1, 0, 2),
+                toOBJIndex(iHeight - 1, iWidth - 1, 3), toOBJIndex(iHeight - 1, iWidth - 1, 4)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
+        // k = 3, i = iHeight - 1, j = 0
+        // k = 0, i = iHeight - 1, j = iWidth - 1
+        // k = 4, i = 0, j = iWidth - 1
+        vertexCoordIndexList.push_back(glm::u32vec3(toOBJIndex(iHeight - 1, 0, 3),
+                toOBJIndex(iHeight - 1, iWidth - 1, 0), toOBJIndex(0, iWidth - 1, 4)));
+        vertexColorIndexList.push_back(glm::u32vec3(1, 1, 1));
         //fclose(f);
 
         FILE *fobj = fopen(output_filename.c_str(), "w");
@@ -495,7 +719,7 @@ private:
 
     glm::mat4 getView(int viewIndex) {
         if (camera_thetas[viewIndex] != 0 || camera_phis[viewIndex] != 0) {
-        //if (true) {
+            //if (true) {
             glm::vec4 other = glm::vec4(glm::cross(front, up), 1.0f);
             glm::mat4 rotateAzimuth = glm::rotate(glm::mat4(1.0f), glm::radians(camera_thetas[viewIndex]), up);
             glm::vec4 new_other = rotateAzimuth * other;
