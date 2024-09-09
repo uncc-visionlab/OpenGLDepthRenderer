@@ -33,7 +33,7 @@ public:
     glm::vec3 Up;
     glm::vec3 Right;
     glm::vec3 WorldUp;
-    // euler Angles
+    // Euler Angles
     float Yaw;
     float Pitch;
     // camera options

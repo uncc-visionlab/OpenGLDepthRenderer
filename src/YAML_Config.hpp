@@ -25,32 +25,51 @@
 
 // std includes
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
 
 class YAML_Object {
 public:
+
+    YAML_Object() {
+    }
     bool parse(const YAML::Node& object);
 
     std::string id;
 };
 
-class YAML_Camera : public YAML_Object {
+class YAML_CoordinateSystem : public YAML_Object {
 public:
 
-    YAML_Camera() : width(0), height(0) {
+    YAML_CoordinateSystem() : origin(0.0f, 0.0f, 0.0f), up(0.0f, 1.0f, 0.0f), front(1.0f, 0.0f, 0.0f) {
     }
     bool parse(const YAML::Node& camera);
-    //Camera::CameraPtr makeCamera();
+    glm::mat4 getTransform();
+    glm::vec3 origin;
+    glm::vec3 up;
+    glm::vec3 front;
+};
 
-    int width;
-    int height;
-    glm::vec3 location;
-    glm::vec3 lookat;
-    std::string type;
-    glm::vec2 ortho_scalef;
-    glm::vec2 pinhole_fov;
+class YAML_VisibilityVolume : public YAML_Object {
+public:
+    int width, height;
+    float fov_degrees;
+    glm::vec3 origin, up, front;
+    float up_max, up_min, radius_max;
+    std::string output_filename;
+
+    YAML_VisibilityVolume() : width(0), height(0), 
+            fov_degrees(90.0f), origin(0.0f, 0.0f, 0.0f),
+            up(0.0f, 1.0f, 0.0f), front(1.0f, 0.0f, 0.0f),
+            output_filename("output.obj") {
+        up_max = std::numeric_limits<float>::max();
+        radius_max = std::numeric_limits<float>::max();        
+        up_min = -std::numeric_limits<float>::max();
+    }
+    
+    bool parse(const YAML::Node& camera);
 };
 
 class YAML_Object3D : public YAML_Object {
@@ -69,35 +88,11 @@ public:
     glm::vec3 scale;
 };
 
-class YAML_Light : public YAML_Object3D {
-public:
-    std::string name; // environmental or parallelogram
-    glm::vec3 color;
-    float intensity;
-
-    YAML_Light() : intensity(100.0f) {
-        color = glm::vec3(1.0f, 1.0f, 1.0f);
-    }
-    bool parse(const YAML::Node& object);
-    //void generateGeometry(std::vector<VertexAttributes>& attributes, std::vector<unsigned int>& indices);
-};
-
-class YAML_Primitive : public YAML_Object3D {
-public:
-    std::string primitive_type;
-    std::vector<float> parameters;
-    std::string material;
-
-    YAML_Primitive() : material("Default") {
-    }
-    bool parse(const YAML::Node& primitive);
-    //void getGeometry(std::vector<VertexAttributes>& attributes, std::vector<unsigned int>& indices);
-};
-
 class YAML_Mesh : public YAML_Object3D {
 public:
 
-    YAML_Mesh() : material("Default") {
+    //YAML_Mesh() : material("Default") {
+    YAML_Mesh() {
     }
     bool parse(const YAML::Node& mesh);
     //    std::vector<tinyobj::shape_t> getShapes();
@@ -105,7 +100,7 @@ public:
 
     std::string format;
     std::string filename;
-    std::string material;
+    //std::string material;
     std::string geometry_type;
 };
 
@@ -114,11 +109,10 @@ public:
     typedef std::shared_ptr<YAML_Config> YAML_ConfigPtr;
 
 
-    YAML_Camera camera;
-    std::vector<YAML_Camera> cameras;
-    std::vector<YAML_Primitive> primitives;
+    //YAML_CoordinateSystem camera;
+    std::vector<YAML_CoordinateSystem> coordsystems;
     std::vector<YAML_Mesh> meshes;
-    std::vector<YAML_Light> lights;
+    std::vector<YAML_VisibilityVolume> visibility_volumes;
     bool parse(const std::string);
 };
 

@@ -1,0 +1,95 @@
+ world_coord_sys:
+    id: world
+    origin: [0.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    front: [1.0, 0.0, 0.0]
+
+ mesh:
+    id: Mesh 1
+    position : [0.0, 0.0, 0.0]
+    scale : 1.0
+    orientation axis, angle: [1, 0, 0, 0]
+    format : OBJ
+    filename : charlotte_01.obj
+ 
+ visibility_vol:
+    id: Volume 1
+    width: 200
+    height: 200
+    fov_degrees: 90
+    origin: [-334.552418, 0.5, 12.993126]
+    front: [1.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    # max height of visibility volume above ground plane [meters]
+    up_max: 500.0
+    # min height of visibility volume above ground plane [meters]
+    up_min: -1.0 
+    # max radius of visibility volume [meters] 
+    radius_max: 400.00 
+    output_file: visibility_vol01.obj
+
+ visibility_vol:
+    id: Volume 2
+    width: 200
+    height: 200
+    fov_degrees: 90
+    origin: [628.715127, 0.5, 475.551707]
+    front: [1.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    # max height of visibility volume above ground plane [meters]
+    up_max: 500.0
+    # min height of visibility volume above ground plane [meters]
+    up_min: -1.0 
+    # max radius of visibility volume [meters] 
+    radius_max: 400.00 
+    output_file: visibility_vol02.obj
+    
+ visibility_vol:
+    id: Volume 3
+    width: 200
+    height: 200
+    fov_degrees: 90
+    origin: [599.063503, 0.5, -351.308546]
+    front: [1.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    # max height of visibility volume above ground plane [meters]
+    up_max: 500.0
+    # min height of visibility volume above ground plane [meters]
+    up_min: -1.0 
+    # max radius of visibility volume [meters] 
+    radius_max: 400.00 
+    output_file: visibility_vol03.obj
+    
+    
+ visibility_vol:
+    id: Volume 4
+    width: 200
+    height: 200
+    fov_degrees: 90
+    origin: [-717.652475, 0.5, -71.028188]
+    front: [1.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    # max height of visibility volume above ground plane [meters]
+    up_max: 500.0
+    # min height of visibility volume above ground plane [meters]
+    up_min: -1.0 
+    # max radius of visibility volume [meters] 
+    radius_max: 400.00 
+    output_file: visibility_vol04.obj
+    
+ visibility_vol:
+    id: Volume 5
+    width: 200
+    height: 200
+    fov_degrees: 90
+    origin: [282.007843, 0.5, 109.035381]
+    front: [1.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    # max height of visibility volume above ground plane [meters]
+    up_max: 500.0
+    # min height of visibility volume above ground plane [meters]
+    up_min: -1.0 
+    # max radius of visibility volume [meters] 
+    radius_max: 400.00 
+    output_file: visibility_vol05.obj
+    

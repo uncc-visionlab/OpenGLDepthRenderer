@@ -1,0 +1,47 @@
+ world_coord_sys:
+    id: world
+    origin: [0.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    front: [1.0, 0.0, 0.0]
+
+ mesh:
+    id: Mesh 1
+    position : [0.0, 0.0, 0.0]
+    scale : 1.0
+    orientation axis, angle: [1, 0, 0, 0]
+    format : OBJ
+    filename : charlotte_01.obj
+ 
+ visibility_vol:
+    id: Volume 1
+    width: 200
+    height: 200
+    fov_degrees: 90
+    origin: [0.0, 1.0, 0.0]
+    front: [1.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+    # max height of visibility volume above ground plane [meters]
+    up_max: 4000.0
+    # min height of visibility volume above ground plane [meters]
+    up_min: -4000.0 
+    # max radius of visibility volume [meters] 
+    radius_max: 600.0 
+    output_file: visibility_vol01.obj
+
+ visibility_vol:
+    id: Volume 2
+    width: 500
+    height: 500
+    fov_degrees: 89
+    origin: [-10.0, 60.0, 0.0]
+    front: [1.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]    
+    # max height of visibility volume above ground plane [meters]
+    up_max: 400.0
+    # min height of visibility volume above ground plane [meters]
+    up_min: -1.0
+    # max radius of visibility volume [meters] 
+    radius_max: 700.0
+    output_file: visibility_vol02.obj
+    
+    
