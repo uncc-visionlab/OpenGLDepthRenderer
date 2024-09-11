@@ -11,6 +11,7 @@ The code also requires the following:
 * libxinerama-dev
 * libxcursor-dev
 * libxxf86m-dev
+* libglm-dev
 
 ## Programs in this repository
 
