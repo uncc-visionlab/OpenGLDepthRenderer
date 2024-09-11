@@ -12,6 +12,7 @@ The code also requires the following:
 * libxcursor-dev
 * libxxf86m-dev
 * libglm-dev
+* libfreetype-dev
 
 ## Programs in this repository
 
