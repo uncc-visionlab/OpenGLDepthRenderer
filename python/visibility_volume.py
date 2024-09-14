@@ -1,22 +1,7 @@
-import os
-import tempfile
 from geometry import Point3D, Point2D
+import os
 import subprocess
-
-# subprocess.run(['blender', '-b', '-P', 'path/to/your/script.py'])
-
-# Point3d = namedtuple('Point3d', ['x', 'y', 'z'])
-vertex = Point3D(x=-110.9651107788086, y=1.0, z=1527.08544921875)
-
-# Point2d = namedtuple('Point2d', ['x', 'y'])
-resolution = Point2D(x=40, y=40)
-
-visibility_volume_index = 1
-world_obj_filename = 'destin_and_miramar_beach.obj'
-output_obj_filename = 'destin_triangle_1_visibility_v1.obj'
-
-
-# /OpenGLDepthRenderer -c charlotte_01.yaml
+import tempfile
 
 class VisibilityVolume:
     def __init__(self):
