@@ -339,7 +339,7 @@ public:
         glfwSetWindowSize(window, iWidth, iHeight);
         // these calls are required per https://github.com/glfw/glfw/issues/1661
         glfwPollEvents();
-        glfwWaitEvents();
+//        glfwWaitEvents();
 
         // initialize the depth buffers
         numImages = 6;
