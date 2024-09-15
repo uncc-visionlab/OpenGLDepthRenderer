@@ -20,7 +20,7 @@ class VisibilityVolume:
         }
         print("VisibilityVolume initialized with default configuration.")
 
-    def configure(self, **kwargs):
+    def configure(self, debug = False, **kwargs):
         """
         Configure the visibility volume with custom parameters.
         Accepts parameters like shape, dimensions, center, and visibility_threshold.
@@ -32,11 +32,12 @@ class VisibilityVolume:
         for key, value in kwargs.items():
             if key in self.parameters:
                 self.parameters[key] = value
-                print(f"Parameter '{key}' set to {value}.")
+                if debug:
+                    print(f"Parameter '{key}' set to {value}.")
             else:
                 print(f"Warning: Unknown parameter '{key}' ignored.")
 
-    def execute(self, config_file_name_and_path):
+    def execute(self, config_file_name_and_path, debug = False):
         # Example: Run the 'ls' command (Linux/Mac) or 'dir' command (Windows)
         # You can replace 'ls' with any other program or script you want to invoke
         os.chdir(self.parameters['visibility_prog_path_root'])
@@ -48,11 +49,12 @@ class VisibilityVolume:
                                   # '-o', self.parameters['output_obj_filename']])
             print("Command: " + ' '.join(map(str, argument_list)) + "\n")
             result = subprocess.run(argument_list, capture_output=True, text=True, check=True)
-            print(f"Output:\n{result.stdout}")
+            if debug:
+                print(f"Output:\n{result.stdout}")
         except subprocess.CalledProcessError as e:
             print(f"An error occurred: {e}")
 
-    def evaluate(self):
+    def evaluate(self, debug = False):
         """
         Compute the visibility volume for a given point.
 
@@ -62,14 +64,14 @@ class VisibilityVolume:
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
             # Print the path of the temporary directory
-            print(f"Temporary directory created at: {temp_dir}")
+            if debug: print(f"Temporary directory created at: {temp_dir}")
 
             # Define the path of the new folder inside the temporary directory
             folder_path = os.path.join(temp_dir, "visibility_volume")
 
             # Create the new folder
             os.mkdir(folder_path)
-            print(f"New folder created at: {folder_path}")
+            if debug: print(f"New folder created at: {folder_path}")
 
             # Define the path of the new text file inside the new folder
             config_file_path_and_name = os.path.join(folder_path, "visibility_config.yaml")
@@ -78,8 +80,11 @@ class VisibilityVolume:
 
         # The temporary directory and its contents are deleted once the block ends
 
-    def write_config_file(self, file_path):
+    def write_config_file(self, file_path, debug = False):
         params = self.parameters
+        if params['max_radius'] is None or params['max_radius'] < 0:
+            params['max_radius'] = 1000
+            print(f"Setting max_radius to {params['max_radius']}")
         visibility_yaml_config = f"""
 world_coord_sys:
     id: world
@@ -120,9 +125,10 @@ visibility_vol:
         print(f"File written to: {file_path}")
 
         # Optionally, read and display the content of the file
-        with open(file_path, "r") as file:
-            content = file.read()
-        print("File content:\n", content)
+        if debug:
+            with open(file_path, "r") as file:
+                content = file.read()
+            print("File content:\n", content)
 
 
 # Example usage of the VisibilityVolume class
