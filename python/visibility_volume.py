@@ -1,5 +1,11 @@
-from geometry import Point3D, Point2D
+# Setup python path when running through blender via "blender -P convex_polygon_visibility_volume.py"
 import os
+import sys
+local_module_path=os.path.dirname(os.path.abspath(__file__))
+if local_module_path not in sys.path:
+    sys.path.append(local_module_path)
+
+from geometry import Point3D, Point2D
 import subprocess
 import tempfile
 
@@ -7,6 +13,7 @@ class VisibilityVolume:
     def __init__(self):
         # Initialize default configuration parameters
         self.parameters = {
+            "blender_gui": False,
             "world_obj_filename": "",
             "output_obj_filename": "",
             "visibility_volume_index": "1",
@@ -133,6 +140,16 @@ visibility_vol:
 
 # Example usage of the VisibilityVolume class
 if __name__ == "__main__":
+    # Check if an argument is passed
+    if "blender" in sys.argv[0]:
+        # Read the first argument
+        first_argument = sys.argv[0]
+        print(f"First command line argument: {first_argument}. Running in blender GUI.")
+        blender_gui = True
+    else:
+        print("No arguments were provided. Not running in blender GUI")
+        blender_gui = False
+
     # Create an instance of the VisibilityVolume class
     volume = VisibilityVolume()
     data_path_prefix = "/home/arwillis/CLionProjects/visibility/data/"
@@ -149,6 +166,7 @@ if __name__ == "__main__":
     vertex_index = 1
     # Configure the visibility volume with custom parameters
     visibility_volume_config = {
+        "blender_gui": blender_gui,
         "world_obj_filename": input_data_path + "destin_and_miramar_beach.obj",
         "output_obj_filename": output_data_path + f"destin_triangle_{segment_index}_visibility_v{vertex_index}.obj",
         "visibility_volume_index": f"{vertex_index}",
