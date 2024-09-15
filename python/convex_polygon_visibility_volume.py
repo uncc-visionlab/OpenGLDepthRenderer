@@ -1,6 +1,5 @@
 import bpy
 from geometry import Point3D, Point2D
-import time
 from threading import Timer
 from visibility_volume import VisibilityVolume
 
@@ -13,7 +12,7 @@ class BlenderAutomation:
         print("BlenderAutomation initialized with default configuration.")
 
     # Blender control functions
-    def set_view_frustum_end(distance=10000):
+    def set_view_frustum_end(self, distance=10000):
         # Set the view frustum end distance for the active camera or 3D view
         for area in bpy.context.screen.areas:
             if area.type == 'VIEW_3D':
@@ -27,7 +26,7 @@ class BlenderAutomation:
                             print(f"View frustum end set to {distance}")
                         break
 
-    def select_and_frame_objects(object_names):
+    def select_and_frame_objects(self, object_names):
         # Deselect all objects first
         bpy.ops.object.select_all(action='DESELECT')
 
