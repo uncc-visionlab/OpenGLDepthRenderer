@@ -153,9 +153,10 @@ if __name__ == "__main__":
     # Create an instance of the VisibilityVolume class
     volume = VisibilityVolume()
     data_path_prefix = "/home/arwillis/CLionProjects/visibility/data/"
-    prog_path_prefix = "/home/arwillis/CLionProjects/visibility/"
     input_data_path = data_path_prefix + "inputs/"
     output_data_path = data_path_prefix + "results/"
+
+    prog_path_prefix = "/home/arwillis/CLionProjects/visibility/"
     visibility_prog_path_root = prog_path_prefix + "OpenGLDepthRenderer/cmake-build-debug/bin/"
     visibility_prog_path_and_filename = visibility_prog_path_root + "ogl_depthrenderer"
     vertex1 = Point3D(-110.9651107788086, 1.0, 1527.08544921875)

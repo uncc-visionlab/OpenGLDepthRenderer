@@ -18,4 +18,9 @@ Installation of the python scripting module (bpy-4.1.0a0-cp311-cp311-manylinux_2
 
 "pip install bpy-4.1.0a0-cp311-cp311-manylinux_2_31_x86_64.whl"
 
-From a console with some python 3.11 virtual environment activated. Hope to make progress on this today.
+From a console with some python 3.11 virtual environment activated.
+
+A couple of notes.
+
+  -  I have been running the python code from the python folder.
+  -  Due to a unexpected interface issue you cannot move the mouse during the calculation as it will move the scene and cause the calculation to occur with the wrong pose. This is something fixable but, for now, please do not move your mouse during the program execution.
